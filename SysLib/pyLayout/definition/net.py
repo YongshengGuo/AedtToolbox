@@ -84,6 +84,8 @@ class Net(Definition):
         self.parsed = True
     
     def _getObjects(self):
+        #Note: bad values for components 
+        
         objectCDicts = ComplexDict()
         maps = {}
         objectCDicts.update("Net", self.name)
@@ -111,7 +113,14 @@ class Net(Definition):
 
     
     def getConnectedComponnets(self):
-        return self.getConnectedObjs('component')
+#         return self.getConnectedObjs('component') #return wrong values
+        pins = self.getConnectedObjs('pin')
+        compList = []
+        for name in pins:
+            pinObj = self.layout.Pins[name]
+            if pinObj.CompName and pinObj.CompName not in compList:
+                compList.append(pinObj.CompName)
+        return compList
 
     
     def getConnectedPorts(self):
@@ -165,9 +174,14 @@ class Net(Definition):
             return
             
         log.info("Backdrill net : %s"%self.name)
+        
         viaNames = self.getConnectedObjs("via")
-        for via in viaNames:
-            self.layout.vias[via].backdrill(stub = stub)
+        for name in viaNames:
+            self.layout.Vias[name].backdrill(stub = stub)
+            
+        pinNames = self.getConnectedObjs("pin")
+        for name in pinNames:
+            self.layout.Pins[name].backdrill(stub = stub)
             
     def rename(self,newNet):
         objs = self.layout.oEditor.FindObjects('Net', self.Name)
@@ -358,6 +372,40 @@ class Nets(Definitions):
         
         self.layout.oEditor.DeleteNets(netList)
         
+        
+    def reNameXnetForce(self,regNets,tail="_C"):
+        '''
+        on: R or C or L or RC or RLC ... 
+        '''
+        
+        nets = self.getRegularNets(regNets)
+        i = 0
+        pwrNets = self.PowerNetNames
+        for net in nets:
+            i += 1
+#             for comp in self.layout.Nets[net].Objects.Components:
+            for name in self.layout.Nets[net].getConnectedComponnets():
+                comp = self.layout.Components[name]
+                if len(comp.Pins) != 2: #must RLC
+                    continue
+                
+                pnet,nnet = comp.NetNames
+                if pnet in pwrNets or nnet in pwrNets: 
+#                     log.debug("Component: %s, Pnet: %s, Nnet: %s %s"%(comp.Name,pnet,nnet,"................%s/%s"%(i,len(comps))))
+                    continue
+
+                
+#                 log.debug("Component: %s, Pnet: %s, Nnet: %s %s"%(comp.Name,pnet,nnet,"................%s/%s"%(i,len(comps))))
+                
+                log.info(("Component: %s, Pnet: %s, Nnet: %s"%(comp.Name,pnet,nnet)).ljust(50,"-") + " %s/%s"%(i,len(nets)))
+                if pnet == net:
+                    log.info(comp.Name+" Nets: "+ pnet + " " + nnet + ": Rename "+ nnet + " to " + pnet+tail)
+                    self.layout.Nets[nnet].rename(pnet+tail)
+                    
+                if nnet == net:    
+                    log.info(comp.Name+" Nets: "+ nnet + " " + pnet+ ": Rename "+ pnet + " to " + nnet+tail)
+                    self.layout.Nets[pnet].rename(nnet+tail)
+                
         
     def autoRLCnet(self,on = "R"):
         '''

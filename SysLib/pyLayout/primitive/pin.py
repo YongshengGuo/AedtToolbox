@@ -154,6 +154,46 @@ class Pin(Primitive):
         return objC
     
 
+    def backdrill(self,stub = None):
+        '''
+        this function only support 2023.1 or later versions 
+        '''
+        
+        
+        if stub == None:
+            stub = self.layout.options["H3DL_backdrillStub"]
+        
+        layers = []
+        #for lines
+        names = self.getConnectedObjs('line')
+        for name in names:
+            line = self.layout.lines[name]
+            layers.append(line["PlacementLayer"])
+        
+        #for smt pad
+        names = self.getConnectedObjs('pin')
+        for name in names:
+            pin = self.layout.pins[name]
+            if pin.isSMTPad: layers.append(pin["Start Layer"])
+        
+        if len(layers)<2: #small then two layers
+            return
+        
+        layers.sort(key = lambda x: Unit(self.layout.layers[x].Lower).V,reverse = True)
+        #---backdrill Top
+        if layers[0] != self.layout.layers["C1"].Name:
+            log.info("Backdrill vias from Top: %s, stub:%s, net:%s"%(self.name,stub,self.Net))
+            self.BackdrillTop = layers[0]
+            self.TopOffset = stub
+            self.update()
+        #---backdrill bottom
+        if layers[-1] != self.layout.layers["CB1"].Name:
+            log.info("Backdrill vias from Bottom: %s, stub:%s, net:%s"%(self.name,stub,self.Net))
+            self.BackdrillBottom = layers[-1]
+            self.BottomOffset = stub
+            self.update()
+
+
 class Pins(Primitives):
     
     def __init__(self,layout=None):

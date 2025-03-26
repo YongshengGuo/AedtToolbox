@@ -42,12 +42,12 @@ get component information from oEditor.GetComponentInfo API
 """
 
 
-import re
+import re,os
 from ..common import hfss3DLParameters
 from ..common.arrayStruct import ArrayStruct
 from ..common.complexDict import ComplexDict
 from ..common.unit import Unit
-from ..common.common import log,loadCSV,writeCSV
+from ..common.common import log,loadCSV,writeCSV,writeData
 from .definition import Definitions,Definition
 from ..common.common import DisableAutoSave,ProcessTime
 
@@ -1126,7 +1126,6 @@ class Layers(Definitions):
     def exportXml(self,path):
         log.info("Export stackup xml to %s"%path)
         self.layout.oEditor.ExportStackupXML(path)
-        
         
     def importXml(self,path):
         log.info("Import stackup xml from %s"%path)

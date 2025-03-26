@@ -22,6 +22,7 @@
 	<SubMenu Name="Via" DesignType="3DLayout">
 		<SubMenu Type="MenuItem" Name="autoBackdrill" ExecuteType="IronPython" Path="$UserLib/3DLayout/Via/autoBackdrill.py" Arguments ="" PythonPath=""></SubMenu>
 		<SubMenu Type="MenuItem" Name="keepHDIViaPad" ExecuteType="Python" Path="$UserLib/3DLayout/Via/keepHDIViaPad.py" Arguments ="" PythonPath=""></SubMenu>
+		<SubMenu Type="MenuItem" Name="via_design_wizard" ExecuteType="Python" Path="C:/work/Project/AE/Script/via_design_wizard-0.0.3/src/via_design_wizard.py" Arguments ="" PythonPath=""></SubMenu>
 
 	</SubMenu>
 	<SubMenu Name="Port" DesignType="3DLayout">
@@ -33,8 +34,8 @@
 		<SubMenu Type="MenuItem" Name="QuitAedt" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="ForceQuitAedt"></SubMenu>
 		<SubMenu Type="MenuItem" Name="CloseProjectAndSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAndSave"></SubMenu>
 		<SubMenu Type="MenuItem" Name="CloseProjectNotSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeNotSave"></SubMenu>
-		<SubMenu Type="MenuItem" Name="CloseAllProjectWithSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAllProjectWithSave"></SubMenu>
-		<SubMenu Type="MenuItem" Name="CloseAllProjectWithoutSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAllProjectWithoutSave"></SubMenu>
+		<SubMenu Type="MenuItem" Name="CloseAllProjectAndSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAllProjectWithSave"></SubMenu>
+		<SubMenu Type="MenuItem" Name="CloseAllProjectNotSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAllProjectWithoutSave"></SubMenu>
 		<SubMenu Type="MenuItem" Name="ReloadProject" ExecuteType="IronPython" Path="$UserLib/Desktop/Close.py" EntryFunc="Reload"></SubMenu>
 	</SubMenu>
 	<SubMenu Name="License">
@@ -49,6 +50,6 @@
 		<SubMenu Type="MenuItem" Name="showProjectName_Ironpython" ExecuteType="IronPython" Path="$UserLib/Template/showProjectName.py" Arguments ="" EntryFunc="main" PythonPath=""></SubMenu>
 		<SubMenu Type="MenuItem" Name="ShowSysArgs" ExecuteType="Python" Path="$UserLib/Template/showSysArgs.py" Arguments ="testArg1 testArg2" PythonPath=""></SubMenu>
 	</SubMenu>
-	<SubMenu Type="MenuItem" Name="Help" ExecuteType="EXE" Path="$UserLib/../AnsysToolboxHelp.pdf"></SubMenu>
+	<SubMenu Type="MenuItem" Name="Help" ExecuteType="EXE" Path="$help/index.html"></SubMenu>
 	<SubMenu Type="MenuItem" Name="Exit" ExecuteType="Command"></SubMenu>
 </Menu>

@@ -253,8 +253,9 @@ class ComplexDict(object):
         if isinstance(dictData, dict):
             self._dict = dictData
             
-        if isinstance(dictData, self.__class__):
-            self._dict = dictData.Dict
+        if isinstance(dictData,ComplexDict):
+#             return dictData
+            self._dict = dictData._dict
         
     def __getitem__(self, key):
         """
@@ -284,7 +285,8 @@ class ComplexDict(object):
         
         #if dict, return ComplexDict(), else value
         if isinstance(val, (dict)):
-            return self.__class__(val)
+#             return self.__class__(val)
+            return ComplexDict(val) #self.__class__ 被继承时会有变化
         else:
             return val
         
@@ -317,27 +319,37 @@ class ComplexDict(object):
     def __delitem__(self,key):
         self.delKey(key)
         
+# __getattribute__：在访问任何属性时都会被调用，包括内置属性。覆盖时需要小心避免无限递归。
+# __getattr__：仅在访问不存在的属性时才会被调用。相对更安全，适用于提供默认属性值或动态计算属性值。
+
     def __getattr__(self,key):
         if key in ['__get__','__set__']:
             #just for debug run
             return None
         
+        if not isinstance(key, str):
+            print("property or key must be string: %s"% str(key))
+            raise("property or key must be string: %s"% str(key))
+        
         if key in ["_dict","maps","ignorCase","enableUpdate"]:
-            return object.__getattr__(self,key)
+            try:
+                return object.__getattr__(self,key)
+            except:
+                print("property or key not exist: %s"%key)
         else:
             log.debug("__getattr__ from _dict: %s"%key)
             return self[key]
         
-#         try:
-#             return  object.__getattr__(self,key)
-#         except:
-#             log.debug("__getattribute__ from _dict: %s"%key)
-#             return self[key] #self.get(key)
 
-        raise Exception("Key not found: %s"%key)
+        raise Exception("property or key  not found: %s"%key)
 
          
     def __setattr__(self, key, value):
+        
+        if not isinstance(key, str):
+            print("property or key must be string: %s"% str(key))
+            raise("property or key must be string: %s"% str(key))
+        
         if key in ["_dict","maps","ignorCase","enableUpdate"]:
             object.__setattr__(self,key,value)
         else:
@@ -367,6 +379,10 @@ class ComplexDict(object):
     
     def __dir__(self):
         return list(dir(self.__class__)) + list(self.__dict__.keys()) + list(self.Props)
+
+    def __deepcopy__(self, memo):
+        #memo：一个字典，用于记录已经复制过的对象，防止循环引用导致的无限递归。
+        return deepcopy(self._dict, memo)
 
     @property
     def Props(self):
@@ -623,7 +639,7 @@ class ComplexDict(object):
         
                     
     def copy(self):
-        return self.__class__(deepcopy(self.Dict))
+        return self.__class__(deepcopy(self._dict))
     
     
     def writeJosn(self,path):

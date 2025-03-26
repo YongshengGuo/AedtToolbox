@@ -531,6 +531,13 @@ class Layout(object):
                 ] + cutList
             ])
         
+        
+#     def cutoutUseEdb(self,newDesignName, includeNetList, clipNetList, expansion = "2mm",InPlace=False):
+#         edb = Edb(edbPath, edbversion=edbversion)
+#         edb.cutout(signal_list=sigNetList, reference_list=cutNets, extent_type="Conforming", expansion_size=expansionSize)
+#         edb.save_edb()
+#         edb.close_edb()
+        
     def _merge(self,layout2,solderOnComponents = None,align = None,solderBallSize = "14mil,14mil", stackupReversed = False, prefix = ""):
         '''
             合并另外一个layout对象，叠层在Z轴叠加
@@ -687,7 +694,7 @@ class Layout(object):
         #get via most unit 
         objs = self.oEditor.FindObjects('Type', "via")
         if len(objs)>5:
-            lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"Top Offset")) for obj in objs[:5]]
+            lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"HoleDiameter")) for obj in objs[:5]]
             count = Counter(lst)
             most_common = count.most_common(1)
             unit = most_common[0][0]
@@ -771,8 +778,9 @@ class Layout(object):
         ra = str(r)
         if not name:
             name = self.Circles.getUniqueName("circle_")
-        log.info("Create Circle: %s"%name)
-        name = self.oEditor.addCircle(
+        log.info("Create Circle: %s"%(name))
+#         log.info("Create Circle: %s  location:%s r: %s"%(name,str(location),str(r)))
+        name = self.oEditor.CreateCircle(
             [
                 "NAME:Contents",
                 "circleGeometry:="    , ["Name:=", name ,"LayerName:=", lay,"lw:=", "0","x:=",0 ,"y:=", 0 ,"r:=", "1um"]
@@ -807,7 +815,7 @@ class Layout(object):
         if not name:
             name = self.Circles.getUniqueName("line_")
         log.info("Create Line: %s"%name)
-        name = self.layout.oEditor.addLine(
+        name = self.layout.oEditor.CreateLine(
             [
                 "NAME:Contents",
                 "lineGeometry:=", 
@@ -1088,6 +1096,33 @@ class Layout(object):
         self.initDesign()
 #         self.initDesign(projectName=os.path.splitext(os.path.basename(path))[0])
         
+    def exportGDS(self,path=None,outLayerMapPath = None):
+        
+        if path == None:
+            path = self.ProjectPath+".gds"
+
+        if not outLayerMapPath:
+            outLayerMapPath = path+".layermap"
+        
+        log.info("Export layout to gds to %s"%path)
+
+        LayerMap = []
+        LayerMapTxts = []
+        for i,name in enumerate(self.layers.ConductorLayerNames):
+            LayerMap.append("entry:=")
+            LayerMap.append([ "layer:=" , name, "id:=" , i*2, "include:=" , True])
+            LayerMapTxts.append("%s %s"%(i*2,name))
+
+        self.oEditor.ExportGDSII(
+            [
+                "NAME:options",
+                "FileName:=" , path,
+                "NumVertices:=" , 8191,
+                "ArcTol:=" , 2E-06,
+                "LayerMap:=" ,LayerMap
+            ])
+        writeData(LayerMapTxts,outLayerMapPath)
+
     def openAedt(self,path,unlock=False):
         if unlock:
             if os.path.exists(path+".lock"):

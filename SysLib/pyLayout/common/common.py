@@ -290,13 +290,28 @@ def taskForEach(MaxParallel = 4):
     tasks = taskForEach(5)
     tasks(inputList,func)
     '''
-    from System.Threading.Tasks import Parallel,ParallelOptions 
-    taskOptions = ParallelOptions()
-    taskOptions.MaxDegreeOfParallelism = MaxParallel
-    
-    def forEach(inputList,func):
-        Parallel.ForEach(inputList, taskOptions,func)
-    return forEach
+    if isIronpython:
+        import clr #System lib need
+        from System.Threading.Tasks import Parallel,ParallelOptions 
+        taskOptions = ParallelOptions()
+        taskOptions.MaxDegreeOfParallelism = MaxParallel
+        
+        def forEach(inputList,func):
+            Parallel.ForEach(inputList,taskOptions,func)
+        return forEach
+    else:
+        import multiprocessing
+        # 创建一个进程池，包含MaxParallel个工作进程
+        pool = multiprocessing.Pool(processes=MaxParallel)
+        def forEach(inputList,func):
+            # 使用 map 方法分配任务给进程池
+            results = pool.map(func,inputList)
+            # 关闭进程池，不再接受新的任务
+            pool.close()
+            # 等待所有进程完成
+            pool.join()
+        return forEach
+        
 
 
 def regAnyMatch(regs,val,flags = re.IGNORECASE):
