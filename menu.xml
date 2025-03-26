@@ -50,6 +50,6 @@
 		<SubMenu Type="MenuItem" Name="showProjectName_Ironpython" ExecuteType="IronPython" Path="$UserLib/Template/showProjectName.py" Arguments ="" EntryFunc="main" PythonPath=""></SubMenu>
 		<SubMenu Type="MenuItem" Name="ShowSysArgs" ExecuteType="Python" Path="$UserLib/Template/showSysArgs.py" Arguments ="testArg1 testArg2" PythonPath=""></SubMenu>
 	</SubMenu>
-	<SubMenu Type="MenuItem" Name="Help" ExecuteType="EXE" Path="$help/index.html"></SubMenu>
+	<SubMenu Type="MenuItem" Name="Help" ExecuteType="EXE" Path="$docs/index.html"></SubMenu>
 	<SubMenu Type="MenuItem" Name="Exit" ExecuteType="Command"></SubMenu>
 </Menu>
