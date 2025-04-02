@@ -54,6 +54,7 @@ def main():
         return
     
     layout.Layers.loadFromCSV(csvPath)
+    layout.release()
 
 if __name__ == '__main__':
 #     test1()

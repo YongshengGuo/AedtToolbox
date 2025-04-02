@@ -506,7 +506,7 @@ class Layout(object):
         
         #delete nets that not used
         kNets = includeNetList + clipNetList
-        delNet = list(filter(lambda n:n not in kNets,self.Nets.NetNames))
+        delNet = list(filter(lambda n:n not in kNets,self.Nets.NameList))
         log.debug("delete nets not used in cutout: %s"%",".join(delNet))
         self.Nets.deleteNets(delNet)
         
@@ -531,12 +531,6 @@ class Layout(object):
                 ] + cutList
             ])
         
-        
-#     def cutoutUseEdb(self,newDesignName, includeNetList, clipNetList, expansion = "2mm",InPlace=False):
-#         edb = Edb(edbPath, edbversion=edbversion)
-#         edb.cutout(signal_list=sigNetList, reference_list=cutNets, extent_type="Conforming", expansion_size=expansionSize)
-#         edb.save_edb()
-#         edb.close_edb()
         
     def _merge(self,layout2,solderOnComponents = None,align = None,solderBallSize = "14mil,14mil", stackupReversed = False, prefix = ""):
         '''
@@ -691,14 +685,16 @@ class Layout(object):
     
     def getUnit2(self):
         
+        unit1 = None
+        unit2 = None
         #get via most unit 
         objs = self.oEditor.FindObjects('Type', "via")
         if len(objs)>5:
             lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"HoleDiameter")) for obj in objs[:5]]
             count = Counter(lst)
             most_common = count.most_common(1)
-            unit = most_common[0][0]
-            return unit
+            unit1 = most_common[0][0]
+#             return unit
         
         #get line most unit  LineWidth
         objs = self.oEditor.FindObjects('Type', "line")
@@ -706,11 +702,17 @@ class Layout(object):
             lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"LineWidth")) for obj in objs[:5]]
             count = Counter(lst)
             most_common = count.most_common(1)
-            unit = most_common[0][0]
-            return unit
+            unit2 = most_common[0][0]
+#             return unit
             
-        #have bug in 2024R2
-        return self.oEditor.GetActiveUnits()
+        if unit1 and unit1 == unit2:
+            return unit1
+        
+        elif unit2:
+            return unit2
+        else:
+            #have bug in 2024R2
+            return self.oEditor.GetActiveUnits()
     
     def getUnit(self):
         #have bug in 2024R2
@@ -932,6 +934,22 @@ class Layout(object):
             self.Vias[name].Location = Point(position)
             self.Vias[name].HoleDiameter = hole
             return self.Vias[name]
+    
+    def sanitize(self,nets):
+        log.info("SanitizeLayout "+",".join(nets))
+        self.oEditor.SanitizeLayout(["NAME:SanitizeList"]+list(nets))
+    
+    def healingVoid(self,smallArea="0.5mm2"):
+        log.info("healing Void area small then %s"%smallArea)
+        polys = self.Shapes.NameList
+        self.oEditor.Heal(
+            [
+                "NAME:Feature",
+                "Selection:="        , polys,
+                "Type:="        , "Voids",
+                "AntiPads:="        , False,
+                "Tol:="            , smallArea
+            ])
     
     #--- IO
     
@@ -1204,13 +1222,15 @@ class Layout(object):
             shutil.rmtree(self.resultsPath)
     
     @classmethod
-    def quitAedt(cls):
+    def quitAedt(cls,wait=5):
         Module = sys.modules['__main__']
         if hasattr(Module, "oDesktop"):
             oDesktop = getattr(Module, "oDesktop")
             if oDesktop:
                 log.info("QuitApplication.")
                 oDesktop.QuitApplication()
+                
+        time.sleep(wait) #wait for aedt quit
     
     @classmethod
     def copyAEDT(cls,source,target):

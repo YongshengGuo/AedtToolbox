@@ -43,7 +43,7 @@ def main():
                     layout.log.info("Via pad '%s' already exist, skip."%name)
                 else:
                     layout.log.info("Keep pad for Via '%s' in layer '%s'"%(via.Name,drawLayer))
-                    layout.CreateCircle(layer=drawLayer,location=loc,r=r,name=name)
+                    layout.addCircle(layer=drawLayer,location=loc,r=r,name=name)
                     layout.Circles[name].Net = via.Net
                     
                 drawLayer = layout.Layers[drawLayer].offLayer(1).Name

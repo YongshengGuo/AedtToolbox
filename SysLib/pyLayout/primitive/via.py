@@ -74,15 +74,15 @@ class Via(Primitive):
         PadStack = self.layout.PadStacks[self._info["Padstack Definition"]]
         return PadStack[layer]["PadSize"]
     
-    def getConnectedObjs(self,type="*"):
-        if not self.Net:
-            log.info("via not have net name")
-            return []
-        
-        objs1 = self.layout.oEditor.FilterObjectList('Type',type, self.layout.oEditor.FindObjects('Net', self.Net))
-        objs2 = self.layout.oEditor.FindObjectsByPolygon(self.layout.oEditor.GetBBox(self.name), '*') # * for all layers
-        objs3 = set(objs1).intersection(set(objs2))
-        return list(objs3)
+#     def getConnectedObjs(self,type="*"):
+#         if not self.Net:
+#             log.info("via not have net name")
+#             return []
+#         
+#         objs1 = self.layout.oEditor.FilterObjectList('Type',type, self.layout.oEditor.FindObjects('Net', self.Net))
+#         objs2 = self.layout.oEditor.FindObjectsByPolygon(self.layout.oEditor.GetBBox(self.name), '*') # * for all layers
+#         objs3 = set(objs1).intersection(set(objs2))
+#         return list(objs3)
     
 
     def backdrill(self,stub = None):
@@ -114,13 +114,13 @@ class Via(Primitive):
         layers.sort(key = lambda x: Unit(self.layout.layers[x].Lower).V,reverse = True)
         #---backdrill Top
         if layers[0] != self.layout.layers["C1"].Name:
-            log.info("Backdrill vias from Top: %s, stub:%s, net:%s"%(self.name,stub,self.Net))
+            log.info("Backdrill vias : %s from Top to %s, stub:%s, net:%s"%(self.name,layers[0],stub,self.Net))
             self.BackdrillTop = layers[0]
             self.TopOffset = stub
             self.update()
         #---backdrill bottom
         if layers[-1] != self.layout.layers["CB1"].Name:
-            log.info("Backdrill vias from Bottom: %s, stub:%s, net:%s"%(self.name,stub,self.Net))
+            log.info("Backdrill vias : %s from Bottom to %s, stub:%s, net:%s"%(self.name,layers[-1],stub,self.Net))
             self.BackdrillBottom = layers[-1]
             self.BottomOffset = stub
             self.update()

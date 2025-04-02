@@ -242,8 +242,16 @@ class Path(object):
                     continue
                 
                 newNode = Node([comp,newNet])
-                self.insertNode(newNode,startNode)
-                self._searchPath(newNode, endNodes)
+                
+                #exit recursive if node already exist
+                #known issue here, Unable to display cyclic issues among components; when multiple resistors or inductors are connected in parallel, only one of the components can be displayed.
+                if self.hasNode(node):
+                    log.info("Node already in the path: %s"%node.name)
+#                     self.insertNode(newNode,startNode)
+                    return
+                else:
+                    self.insertNode(newNode,startNode)
+                    self._searchPath(newNode, endNodes)
 
     def printTree(self,startNode=None,prefix='    '):
         if not startNode:

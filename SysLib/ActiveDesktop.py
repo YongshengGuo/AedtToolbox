@@ -144,19 +144,47 @@ def getActiveDesktop():
 
 
 def release():
+    module = sys.modules["__main__"]
+    try:
+        del module.COMUtil
+    except AttributeError:
+        pass
+
+    try:
+        del module.oDesktop
+    except AttributeError:
+        pass
+    try:
+        del module.pyaedt_initialized
+    except AttributeError:
+        pass
+    try:
+        del module.oAnsoftApplication
+    except AttributeError:
+        pass
+    try:
+        del module.desktop
+    except AttributeError:
+        pass
+    try:
+        del module.sDesktopinstallDirectory
+    except AttributeError:
+        pass
+    try:
+        del module.isoutsideDesktop
+    except AttributeError:
+        pass
+    try:
+        del module.AEDTVersion
+    except AttributeError:
+        pass
+    try:
+        del sys.modules["glob"]
+    except:
+        pass
     
-    Module = sys.modules['__main__']
-    installDir = Module.oDesktop.GetExeDir()
-    sys.path.append(installDir)
-    sys.path.append(os.path.join(installDir,r"PythonFiles\DesktopPlugin"))
-    clr.AddReference("Ansys.Ansoft.CoreCOMScripting")
-    from Ansys.Ansoft.CoreCOMScripting.Util import COMUtil
-    COMUtil.ReleaseCOMObjectScope(COMUtil.PInvokeProxyAPI,Module.oDesktop.ScopeID)
-    for i in range(10):
-        COMUtil.ReleaseCOMObjectScope(COMUtil.PInvokeProxyAPI, i)
-    delattr(Module, "oDesktop")
-
-
+    import gc
+    gc.collect()
 
 if __name__ == "__main__":
     oDesktop = getActiveDesktop()

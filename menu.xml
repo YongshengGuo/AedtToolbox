@@ -51,5 +51,6 @@
 		<SubMenu Type="MenuItem" Name="ShowSysArgs" ExecuteType="Python" Path="$UserLib/Template/showSysArgs.py" Arguments ="testArg1 testArg2" PythonPath=""></SubMenu>
 	</SubMenu>
 	<SubMenu Type="MenuItem" Name="Help" ExecuteType="EXE" Path="$docs/index.html"></SubMenu>
+	<SubMenu Type="MenuItem" Name="SyncServer" ExecuteType="python" Path="$SysLib/syncServer.py"></SubMenu>
 	<SubMenu Type="MenuItem" Name="Exit" ExecuteType="Command"></SubMenu>
 </Menu>

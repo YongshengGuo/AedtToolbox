@@ -86,6 +86,7 @@ class Sweep(Definition):
         elif SolveSetupType== "SIwave":
             maps = self.mapsForSIwave
         else:
+            maps = self.mapsForSIwave
             log.error("Unknow setup type:%s"%self._info.setupName)
  
         datas = self.oModule.GetSweepInfo(self._info.setupName,self._info.sweepName)

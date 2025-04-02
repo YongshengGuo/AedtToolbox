@@ -215,13 +215,6 @@ class Definitions(object):
             return self.DefinitionDict[key]
         
         if isinstance(key, str):
-            
-#             #for multi-level key
-#             keyList = re.split(r"[\\/]", key,maxsplit = 1)
-#             keyList = list(filter(lambda k:k.strip(),keyList)) #filter empty key
-#             if len(keyList)>1:
-#                 return self[keyList[0]][keyList[1]]
-            
             if key in self.DefinitionDict:
                 return self.DefinitionDict[key]
             else:

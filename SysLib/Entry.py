@@ -8,7 +8,7 @@ ActiveDesktop.getActiveDesktop()
 appPath = os.path.realpath(__file__)
 appDir = os.path.split(appPath)[0] 
 sys.path.append(appDir)
-sys.path.append(r"C:\work\Study\Script\Ansys\quickAnalyze\FastSim") #for development
+sys.path.insert(0,r"C:\work\Study\Script\Ansys\quickAnalyze\FastSim") #for development
 
 
 if __name__ == '__main__':
@@ -22,12 +22,13 @@ if __name__ == '__main__':
 
     sys.argv = sys.argv[:-2]
     sys.argv[0] = pyPath #change to user python file
-    appDir = os.path.dirname(pyPath)
+    appDirPy = os.path.dirname(pyPath)
     fileName = os.path.basename(pyPath)
     moduleName= os.path.splitext(fileName)[0]
 #     print(pyPath,moduleName,entryFunc)
-
-    sys.path.insert(0,appDir)
+    print("Run script: %s"%pyPath)
+    sys.path.insert(0,appDirPy)
     module = __import__(moduleName, globals(), locals())
     mainFunc = getattr(module, entryFunc)
     mainFunc()
+    ActiveDesktop.release()

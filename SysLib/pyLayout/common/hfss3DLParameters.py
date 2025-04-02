@@ -389,6 +389,106 @@ siwaveSweep = [
         "Frequencies:=", []
     ]
 
+psiSetup =     [
+        "NAME:PSISetup1",
+        [
+            "NAME:Properties",
+            "Enable:="        , "true"
+        ],
+        "SimSetupType:="    , "kHFSSPI",
+        [
+            "NAME:SimulationSettings",
+            "Enabled:="        , True,
+            "Settings:="        , "",
+            "PISliderPos:="        , 1,
+            "ModelType:="        , 1,
+            "MinPlaneAreaToMesh:="    , "1.37066746016288mm2",
+            "MinVoidAreaToMesh:="    , "0.00107269415471683mm2",
+            "SnapLengthThreshold:="    , "2.5um",
+            "IncludeEnhancedBondWireModeling:=", False,
+            "SurfaceRoughnessModel:=", "None",
+            "RMSSurfaceRoughness:="    , "0",
+            "PerformERC:="        , False,
+            "AutoSelectNetsForSimulation:=", True,
+            "IgnoreDummyNetsForSelectedNets:=", True,
+            "IncludeNets:="        , "",
+            "ImprovedLossModel:="    , "Level 1",
+            "IgnoreSmallHoles:="    , 0,
+            "IgnoreSmallHolesMinDiameter:=", "",
+            "ErrorTolerance:="    , "0",
+            "ConductorModeling:="    , "Mesh Inside",
+            "IncludeImprovedLossHandling:=", False,
+            "IncludeImprovedDielectricFillRefinement:=", False
+        ],
+        [
+            "NAME:SweepDataList"
+        ],
+        "SolveSetupType:="    , "HFSSPI"
+    ]
+
+psiSweep = [
+        "NAME:Sweep1",
+        [
+            "NAME:Properties",
+            "Enable:="        , "true"
+        ],
+        [
+            "NAME:Sweeps",
+            "Variable:="        , "Sweep1",
+            "Data:="        , "LINC 5MHz 5GHz 100",
+            "OffsetF1:="        , False,
+            "Synchronize:="        , 0
+        ],
+        "Name:="        , "Sweep1",
+        "Enabled:="        , True,
+        "FreqSweepType:="    , "kInterpolating",
+        "IsDiscrete:="        , False,
+        "UseQ3DForDC:="        , False,
+        "UseAdpSolutionForAllSweepFreq:=", False,
+        "SaveFields:="        , False,
+        "SaveRadFieldsOnly:="    , False,
+        "RelativeSError:="    , 0.005,
+        "EnforceCausality:="    , False,
+        "EnforcePassivity:="    , True,
+        "PassivityTolerance:="    , 0.0001,
+        "FrequencyString:="    , "LINC 5MHz 5GHz 100",
+        "ComputeDCPoint:="    , False,
+        "SIwaveWith3DDDM:="    , False,
+        "UseHFSSSolverRegions:=", False,
+        "UseHFSSSolverRegionSchGen:=", False,
+        "UseHFSSSolverRegionParallelSolve:=", False,
+        "NumParallelHFSSRegions:=", 1,
+        "HFSSSolverRegionsSetupName:=", "",
+        "HFSSSolverRegionsSweepName:=", "",
+        "AutoSMatOnlySolve:="    , True,
+        "MinFreqSMatOnlySolve:=", "1MHz",
+        "MaxSolutions:="    , 250,
+        "InterpUseSMatrix:="    , True,
+        "InterpUsePortImpedance:=", True,
+        "InterpUsePropConst:="    , True,
+        "InterpUseFullBasis:="    , True,
+        "FastSweep:="        , False,
+        "AdaptiveSampling:="    , False,
+        "EnforceDCAndCausality:=", False,
+        "AdvDCExtrapolation:="    , False,
+        "MinSolvedFreq:="    , "0.01GHz",
+        "InterpMinSubranges:="    , 1,
+        "InterpMinSolutions:="    , 0,
+        [
+            "NAME:MatrixConvEntryList"
+        ],
+        [
+            "NAME:HFSSRegionsParallelSimConfig"
+        ],
+        "Frequencies:="        , [],
+        "SteadyStateStart:="    , -1,
+        "MeshFreqChoice:="    , -1,
+        "MeshFreqRangeStar:="    , "-1.0",
+        "MeshFreqRangeStop:="    , "-1.0",
+        "MeshFreqPoints:="    , []
+    ]
+
+
 '''*** 
 changeLayers array parameters'''
 changeLayers =  [

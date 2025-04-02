@@ -299,6 +299,16 @@ class Primitive(object):
         
         log.exception("property error: %s"%ptName)
   
+    def getConnectedObjs(self,type="*"):
+        if not self.Net:
+            log.info("via not have net name")
+            return []
+        
+        objs1 = self.layout.oEditor.FilterObjectList('Type',type, self.layout.oEditor.FindObjects('Net', self.Net))
+        objs2 = self.layout.oEditor.FindObjectsByPolygon(self.layout.oEditor.GetBBox(self.name), '*') # * for all layers
+        objs3 = set(objs1).intersection(set(objs2))
+        return list(objs3)
+
 
     def delete(self):
         
@@ -555,14 +565,15 @@ class Objects3DL(Primitives):
         if len(objTypes)<1:
             return []
         
-        objects = None
+        objectPrimitives = None
         for typ in objTypes:
             try:
-                if objects == None:
-                    objects = self.layout[typ+"s"]
+                if objectPrimitives == None:
+                    objectPrimitives = self.layout[typ+"s"]
                 else:
-                    objects += self.layout[typ+"s"]
+                    objectPrimitives += self.layout[typ+"s"]
             except:
                 log.exception("%s not in layout deifiniton"%typ)
-
-        return objects
+                
+        self._objectDict = objectPrimitives._objectDict
+        return self._objectDict

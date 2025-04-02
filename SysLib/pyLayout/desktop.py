@@ -151,13 +151,13 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
         #try to initial by clr (.net)
         try:
             #only work for ironpython
-            log.info("Intial aedt desktop %s by clr"%version)
+            log.info("Intial aedt desktop %s by Ironpython"%version)
     
             if is_linux:
                 try:
                     from ansys.aedt.core.generic.clr_module import _clr # @UnresolvedImport
                 except:
-                    log.exception("pyaedt must be install: pip3 install pyaedt")
+                    log.exception("pyaedt must be install on linux: pip install pyaedt")
             else:
                 #for windows
                 import clr as _clr # @UnresolvedImport
