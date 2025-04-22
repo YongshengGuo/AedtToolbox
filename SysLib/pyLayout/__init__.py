@@ -27,12 +27,14 @@ from .model3D.Q3D import Q3D
 from .model3D.maxwell import Maxwell
 from .model3D.icepak import Icepak
 
+from .siwave.edbSIwave import EdbSIwaveOptions
+
 ##log is a globle variable
 from .common.common import log,isIronpython
 from .common.progressBar import ProgressBar
 from .common.xlsReader import XlsReader
 
-from .siwave.siwFile import SiwFile
+
 
 from .pyLayout import Layout
 

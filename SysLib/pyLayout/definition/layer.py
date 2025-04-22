@@ -209,7 +209,7 @@ class Layer(Definition):
             return
         
         maps = self.maps.copy()
-        info = ComplexDict(dict(filter(lambda x: len(x) == 2, [p.strip().split(": ", 1) for p in self.layout.oEditor.GetLayerInfo(self.name)])))
+        info = ComplexDict(dict(filter(lambda x: len(x) == 2, [p.lstrip().split(": ", 1) for p in self.layout.oEditor.GetLayerInfo(self.name)])))
         
         
 #         info.setMaps(self.maps)
@@ -1064,6 +1064,7 @@ class Layers(Definitions):
                 
                 if key.lower() == "roughness":
                     layerDict["UseR"] = True
+                    layerDict[key] = re.sub(r"[,;:]",",",layerDict[key])
                     continue
                 
                 # Thickness(um)
@@ -1117,7 +1118,7 @@ class Layers(Definitions):
             row.append(layer.Thickness)
             row.append(layer.LayerDK)
             row.append(layer.LayerDF)
-            row.append(layer.Roughness if layer.Type == "signal" and layer.UseRoughness else "")
+            row.append(layer.Roughness.replace(",",";") if layer.Type == "signal" and layer.UseRoughness else "")
             layerList.append(row)
         
         writeCSV(csvPath,layerList,header=header)

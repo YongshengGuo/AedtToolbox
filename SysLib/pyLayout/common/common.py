@@ -31,7 +31,7 @@ is_linux = "posix" in os.name
 def reSubR(pattern, repl, string, count=0, flags=0):
     return re.sub(pattern, repl, string[::-1],count,flags)[::-1]
 
-def readData(path,encoding = None):
+def readData(path):
     '''读取文本文件
 
     Args:
@@ -41,20 +41,19 @@ def readData(path,encoding = None):
         list: 返回文件所有行
     '''
 
-    with open(path, 'r') as file:
+    with open(path, 'rb') as file:
         # 读取文件内容，得到字节串
         content = file.read()
         file.close()
         # 将字节串解码为 Unicode 字符串
     try:
-            if encoding and encoding.lower() == 'utf-8':
-                content = content.decode('utf-8',errors='ignore')
-            return content
-    except:
+        content.decode("utf-8")
         return content
+    except:
+        return content.decode("ascii")
 
 
-def readlines(path,encoding = None):
+def readlines(path):
     '''读取文本文件
 
     Args:
@@ -76,10 +75,6 @@ def readlines(path,encoding = None):
             line = "readData" 
             while(line):
                 line = file.readline()
-                # 将字节串解码为 Unicode 字符串
-                if encoding and encoding.lower() == 'utf-8':
-                    line = line.decode('utf-8')
-                    
                 yield line 
             file.close()
 
@@ -116,7 +111,7 @@ def readCfgFile(path):
         raise FileNotFoundError("配置文件%s不存在"%path)
     
     config_dict = {}
-    for line1 in readlines(path,encoding='utf-8'):
+    for line1 in readlines(path):
         line = line1.strip()
         if not line:
             continue

@@ -287,7 +287,8 @@ class Layout(object):
         #intial error
         if self._oDesktop == None: 
             log.exception("Intial oDesktop error... ")
-            
+        
+        print("Aedt Version: %s"%self._oDesktop.GetVersion())
         return self._oDesktop
     
      
@@ -1190,7 +1191,7 @@ class Layout(object):
         log.info("Save project: %s"%self.ProjectPath)
         self.oProject.Save()
     
-    def saveSiwave(self,path=None):
+    def exportSiwave(self,path=None):
         
         if not path:
             path = os.path.splitext(self.ProjectPath)[0]+".siw"

@@ -13,17 +13,17 @@ class Config(ComplexDict):
     
     
     def __init__(self,dictData=None):
-        super(self.__class__,self).__init__(dictData=dictData,path=None,maps=None)
+        super(Config,self).__init__(dictData=dictData,path=None,maps=None)
         FormatDict = {
             "list":[],
             "dict":[],
+            "str":[],
             "float":[],
             "int":[],
             "bool":[],
             "func":[]
             }
         self.update("FormatDict", FormatDict)
- 
         self.format()
         
     
@@ -78,6 +78,12 @@ class Config(ComplexDict):
         for k in self.FormatDict["float"]:
             if isinstance(options[k], str):
                 options[k] = float(options[k])
+
+        #---str
+        for k in self.FormatDict["str"]:
+            if not isinstance(options[k], str):
+                options[k] = float(options[k])
+
         #---bool
         for k in self.FormatDict["bool"]:
             if isinstance(options[k], str):

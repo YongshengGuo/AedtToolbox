@@ -74,6 +74,7 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
         aedtInstallDir = oDesktop.GetExeDir()
     elif installDir != None:
         aedtInstallDir = installDir.strip("/").strip("\\")
+#         print("AEDT InstallDir: %s"%aedtInstallDir)
     else:
         #environ ANSYSEM_ROOTxxx, set installDir from version
         
@@ -101,11 +102,12 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
                 ANSYSEM_ROOTs.sort(key=lambda x: x[-3:])
                 aedtInstallDir = os.environ[ANSYSEM_ROOTs[-1]]
          
-        if aedtInstallDir: 
-            sys.path.insert(0,aedtInstallDir)
-            sys.path.insert(0,os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin'))
-        else:
-            log.exception("please set environ ANSYSEM_ROOT=Ansys EM install path...")
+    if aedtInstallDir: 
+        print("AEDT InstallDir: %s"%aedtInstallDir)
+        sys.path.insert(0,aedtInstallDir)
+        sys.path.insert(0,os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin').replace('\\', '/'))
+    else:
+        log.exception("please set environ ANSYSEM_ROOT=Ansys EM install path...")
         
 #     sys.path.insert(0,aedtInstallDir)
 #     sys.path.insert(0,os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin'))
@@ -117,7 +119,8 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
         ver2 = ver1.replace(".", "")[-3:]
         version = "Ansoft.ElectronicsDesktop.20%s.%s" % (ver2[0:2],ver2[2])
     else:
-        pass
+        if "Ansoft.ElectronicsDesktop" not in version:
+            version = "Ansoft.ElectronicsDesktop." + version
     
     #for python
     if not isIronpython:
@@ -125,8 +128,16 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
         if nonGraphical or newDesktop or is_linux:
             try:
                 #only for version last then 2024R1
-                log.info("load PyDesktopPlugin")
+                log.info("load PyDesktopPlugin:%s"%(os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin')))
                 import PyDesktopPlugin  # @UnresolvedImport
+            except:
+                log.info("Not load PyDesktopPlugin in path:%s"%os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin'))
+
+            
+            try:
+#                 #only for version last then 2024R1
+#                 log.info("load PyDesktopPlugin")
+#                 import PyDesktopPlugin  # @UnresolvedImport
                 oAnsoftApp = PyDesktopPlugin.CreateAedtApplication(NGmode=nonGraphical,alwaysNew = newDesktop)
                 oDesktop = oAnsoftApp.GetAppDesktop()
             except:
