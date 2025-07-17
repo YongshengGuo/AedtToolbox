@@ -637,7 +637,15 @@ class ComplexDict(object):
                         
         delDictKey(key,self._dict)
         
-                    
+    def findNode(self,nodeName):
+        for k,v in self._dict.items():
+            if k.lower() == nodeName.lower():
+                return v
+            elif isinstance(v,dict):
+                ret = ComplexDict(v).findNode(nodeName)
+                if ret:
+                    return ret
+        return None       
     def copy(self):
         return self.__class__(deepcopy(self._dict))
     

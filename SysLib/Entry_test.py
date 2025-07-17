@@ -1,8 +1,8 @@
 
 import os,sys
-import ActiveDesktop
+import activeDesktop
 print("ActiveDesktop")
-ActiveDesktop.getActiveDesktop()
+activeDesktop.getActiveDesktop()
 print("after ActiveDesktop")
 
 if __name__ == '__main__':
@@ -12,7 +12,7 @@ if __name__ == '__main__':
     
     print("sys.argv: %s"%sys.argv)
     entryFunc = "main"
-    pyPath = r"C:\work\Study\Script\Ansys\quickAnalyze\FastSim\toolkits\autoRLCNet\autoRLCNet.py"
+    pyPath = r"C:\work\Study\Script\Ansys\quickAnalyze\Yguo\BrtFrt.py"
 
     appDir = os.path.dirname(pyPath)
     sys.path.insert(0,appDir)

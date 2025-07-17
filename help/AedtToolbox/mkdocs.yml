@@ -1,0 +1,183 @@
+# mkdocs.yml
+
+site_name: AedtToolbox Help
+# site_url: https://onlookee.cn/
+# site_dir: ./AedtToolboxHelp
+docs_dir: ./docs
+locale_dir: ./locale
+
+theme:
+  name: material
+  #name: rtd-dropdown
+  language: zh
+  # logo: assets/logo.png
+  # favicon: assets/favicon.png
+  icon:
+    previous: fontawesome/solid/angle-left
+    next: fontawesome/solid/angle-right
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/toggle-switch
+        name: 切换到暗色模式
+      primary: amber
+      accent: cyan
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: 切换到亮色模式
+      primary: amber
+      accent: lime
+  features:
+    - navigation.instant            # 即时加载
+    - navigation.instant.prefetch   # 即时预取
+    - navigation.instant.progress   # 进度指示器
+    - navigation.instant.preview    # 全局启用即时预览
+    - navigation.tracking           # 锚跟踪（类似点击后）
+    - navigation.tabs               # 启用选项卡（最顶层）
+    - navigation.tabs.sticky        # 粘性导航选项卡（保持可见）
+    - navigation.tabs.sections      # 分段
+    - navigation.footer #页脚将呈现在边栏中，但在移动设备上保持原样
+    # - navigation.sections #启用部分后，顶级部分在边栏中呈现为1220px以上视口的组，但在移动设备上保持原样
+    #- navigation.expand             # 展开所有
+    - navigation.path               # 导航路径（面包屑）（没效果）
+    - navigation.indexes            # 节索引页
+    - toc.follow                    # 锚跟随
+    - navigation.top                # 返回顶部按钮
+    - navigation.footer             # 启用页脚（上一页、下一页）
+
+    - search.suggest                # 搜索建议
+    - search.highlight              # 搜索高亮显示
+    - search.share                  # 搜索分享
+    - header.autohide               # 自动隐匿头部
+
+    - content.tabs.link
+    - content.tooltips
+    - content.code.copy #代码复制
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+
+plugins:
+  - search
+  - offline
+  - awesome-pages                   # 启用 mkdocs-awesome-plugin
+  - macros                          # 启用 mkdocs-macros-plugin
+  # - tags:
+  #     tags_file: tags.md
+  #     tags_hierarchy: true          # 启用对标记层次结构
+  #     tags_hierarchy_separator: .   # 层次结构分隔符
+  #     shadow: true
+  #     export: true
+
+  # - mdpo:
+  #     locale_dir: ../locale
+  - mkdocstrings:
+      watch:
+        - ./
+
+# - with-pdf:
+#     author: Yongsheng.guo@ansys.com
+#     copyright: Yongsheng.guo@ansys.com
+#     output_path: Ansys Toolbox Help.pdf
+
+# extra:
+#   alternate:
+#     - name: 中文
+#       lang: zh  
+
+#     # Switch to English
+#     - name: English
+#       link: <your-site>/en/
+#       lang: en
+
+#     # Switch to German
+#     - name: Deutsch
+#       link: <your-site>/de/
+#       lang: de
+
+#     # Switch to Japanese
+#     - name: 日本語
+#       link: <your-site>/ja/
+#       lang: ja
+
+
+# extra:
+#   # site_url: https://onlookee.cn/    # 上面的 site_url 会被覆盖为 http://127.0.0.1:8000
+#   homepage: /
+#   # social: # 社交联系
+#   #   - icon: https://aedt.docs.pyansys.com/version/stable/_images/logo.png
+#   #     link: https://aedt.docs.pyansys.com/version/stable/
+#   #     name: pyaedt
+#   #   - icon: https://cdn5.dcbstatic.com/files/a/l/alh_docebosaas_com/themes/a715b6035cca07090f2eed4f4e9df8756c0c3dde.png
+#   #     link: https://www.ansys.com/
+#   #     name: Ansys
+#   generator: true
+
+copyright: Copyright &copy; 2025 Yongsheng.guo@ansys.com
+# markdown_extensions:
+#   - admonition        # 信息块
+#   - attr_list         # 属性列表
+#   - footnotes         # 脚注
+#   - md_in_html        # HTML 中的 Markdown
+#   - toc:
+#       title: Content
+#       permalink: true
+#       permalink_title: 悬停加载
+#       toc_depth: 6
+#   - pymdownx.tasklist:      # 任务列表
+#       custom_checkbox: true
+#   - pymdownx.highlight      # 语法高亮
+#   - pymdownx.inlinehilite   # 内联语法高亮
+#   - pymdownx.critic         # 启用：突出显示文档中添加、删除或更新的部分
+#   - pymdownx.caret          # 启用：下划线 ^^、上标 ^
+#   - pymdownx.keys           # 启用：键盘键 ++
+#   - pymdownx.mark           # 启用：突出显示 == 
+#   - pymdownx.tilde          # 启用：删除线 ~~、下标 ~
+#   - pymdownx.details        # 启用：可折叠的 Admonition
+#   - pymdownx.superfences    # 代码块
+#   - pymdownx.emoji:         # 表情包
+      # emoji_index: !!python/name:material.extensions.emoji.twemoji
+      # emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      # options:
+        # custom_icons:       # 自定义图标集
+        #   - overrides/.icons
+
+# extra_css:
+#   - assets/css/custom.css   # 引用自定义 CSS 文件
+# extra_javascript:
+#   - assets/js/loader.js     # 引用自定义 JS 文件
+
+
+# edit_uri: edit/main/docs # 编辑按钮跳转的链接
+# repo_url: https://github.com/Wcowin/Mkdocs-Wcowin # 右上角点击跳转的链接
+# repo_name: Mkdocs-Wcowin # 右上角的名字
+
+nav:
+  - AedtToolbox: 
+    - AedtToolbox: ToolBox/index.md
+    - Add MenuItem: ToolBox/AddItem.md
+    - Write your Script: ToolBox/WriteScript.md
+    - UDM/UDP Script: ToolBox/UDM_UDP.md
+    - Quit Aedt: ToolBox/Close.md
+    - update: ToolBox/update.md
+
+  - HFSS3DLayout: 
+    - ExportToHfssWithNets: HFSS3DLayout/ExportToHfssWithNets.md
+    - ImportCSVStackup: HFSS3DLayout/ImportCSVStackup.md
+    - AutoXNet: HFSS3DLayout/AutoXNet.md
+    - DeleteInvalidRLC: HFSS3DLayout/deleteInvalidRLC.md
+    - AutoBackdrill: HFSS3DLayout/AutoBackdrill.md
+    - KeepHDIViaPad: HFSS3DLayout/KeepHDIViaPad.md
+    - RenameEdgePort: HFSS3DLayout/RenameEdgePort.md
+    - orderPorts: HFSS3DLayout/orderPorts.md
+  - Maxwell: 
+    - AutoXNet: HFSS3DLayout/AutoXNet.md
+    - DeleteInvalidRLC: HFSS3DLayout/deleteInvalidRLC.md
+    - AutoBackdrill: HFSS3DLayout/AutoBackdrill.md
+    - KeepHDIViaPad: HFSS3DLayout/KeepHDIViaPad.md
+    - RenameEdgePort: HFSS3DLayout/RenameEdgePort.md
+    - orderPorts: HFSS3DLayout/orderPorts.md
+

@@ -1,0 +1,69 @@
+# mkdocs.yml
+site_name: AnsysToolbox Help
+# site_dir: ./AnsysToolboxHelp
+
+theme:
+  name: "material"
+  language: 'zh'
+  #favicon: 'assets/favicon.ico'
+  # logo:
+  #   icon: ' '
+  # palette:
+  #   primary: 'Light Blue'
+  #   accent: 'Light Blue'
+
+plugins:
+- search
+- autorefs
+# - with-pdf:
+#     author: Yongsheng.guo@ansys.com
+#     copyright: Yongsheng.guo@ansys.com
+#     output_path: Ansys Toolbox Help.pdf
+    #
+    #cover: false
+    #back_cover: true
+    #cover_title: TITLE TEXT
+    #cover_subtitle: SUBTITLE TEXT
+    #custom_template_path: TEMPLATES PATH
+    #
+    #toc_title: TOC TITLE TEXT
+    #heading_shift: false
+    #toc_level: 3
+    #ordered_chapter_level: 2
+    #excludes_children:
+    #    - 'release-notes/:upgrading'
+    #    - 'release-notes/:changelog'
+    #
+    #exclude_pages:
+    #    - 'bugs/'
+    #    - 'appendix/contribute/'
+    #convert_iframe:
+    #    - src: IFRAME SRC
+    #      img: POSTER IMAGE URL
+    #      text: ALTERNATE TEXT
+    #    - src: ...
+    #two_columns_level: 3
+    #
+    #render_js: true
+    #headless_chrome_path: headless-chromium
+    #
+    #output_path: any-place/document.pdf
+    #enabled_if_env: ENABLE_PDF_EXPORT
+    #
+    #debug_html: true
+    #show_anchors: true
+    #verbose: true
+
+- mkdocstrings:
+    watch:
+      - ./
+nav:
+- Ansys Toolbox启动和配置: index.md
+- ExportToHfssWithNets: ExportToHfssWithNets.md
+- ImportCSVStackup: ImportCSVStackup.md
+- AutoXNet: AutoXNet.md
+- DeleteInvalidRLC: deleteInvalidRLC.md
+- AutoBackdrill: AutoBackdrill.md
+- RenameEdgePort: RenameEdgePort.md
+- update: update.md
+

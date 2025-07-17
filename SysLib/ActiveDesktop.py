@@ -122,29 +122,41 @@ def getActiveDesktop():
         print("No Aedt application running ...")
         return None
     
-    topWindow = GetTopWindow(IntPtr(0))
-    nextWindow = FindWindowEx(hwndChildAfter=topWindow)
-    while nextWindow:
-#         print(nextWindow)
-        title = GetWidowText(nextWindow)
-#         print(title)
-        if "Electronics Desktop" in title:
-            processID=GetWindowThreadProcessId(nextWindow)
-            for app in apps:
-                if processID == app.GetProcessID():
-                    print("Get current actived AEDT: %s"%title)
-                    print("Aedt install Dir:%s"%app.GetExeDir())
-                    Module = sys.modules['__main__']
-                    Module.oDesktop = app
-                    return app
+    try:
+        current_window = GetTopWindow(IntPtr(0))
+        while current_window:
+            window_title = GetWidowText(current_window)
+            
+            if window_title and "Electronics Desktop" in window_title:
+                process_id = GetWindowThreadProcessId(current_window)
+                for app in apps:
+                    if process_id == app.GetProcessID():
+                        print("Get current actived AEDT: %s"%window_title)
+                        print("Aedt install Dir:%s"%app.GetExeDir())
+                        
+                        # 将活动桌面实例保存到主模块
+                        main_module = sys.modules['__main__']
+                        main_module.oDesktop = app
+                        return app
+            
+            current_window = FindWindowEx(hwndChildAfter=current_window)
+            
+        return None
 
-        nextWindow = FindWindowEx(hwndChildAfter=nextWindow)
-        
-    return None
+    except Exception as e:
+        print("Error in get_active_desktop:%s"%str(e))
+        return None
 
 
 def release():
     module = sys.modules["__main__"]
+    
+    # try:
+    #     pid = module.oDesktop.GetProcessID()
+    #     os.kill(pid, 9)
+    # except AttributeError:
+    #     pass
+
     try:
         del module.COMUtil
     except AttributeError:
