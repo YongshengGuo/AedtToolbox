@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230416
 
 '''
@@ -138,8 +138,8 @@ class Unit(object):
     def S(self):
         return str(self.Expression)     
     
-    def  __getitem__(self, key):
-        return self.convertoNewUnit(key)
+    def  __getitem__(self, key,decimal=None):
+        return self.convertoNewUnit(key,decimal)
     
     def __call__(self,unit):
         return self.convertoNewUnit(unit)
@@ -194,12 +194,15 @@ class Unit(object):
         return self + u
         
     def __rsub__(self,u):
-        return self - u
+        return Unit(u) - self
  
     def __rmul__(self,u):
         return self * u
           
     def __rdiv__(self,u):
+        return (self.__class__(0)+u)/self
+
+    def __rtruediv__(self,u):
         return (self.__class__(0)+u)/self
 
     def __pow__(self,u):
@@ -249,6 +252,35 @@ class Unit(object):
             return self<Unit(u)
         return self<str(u)
 
+    def __ge__(self,u):
+        """重载 >= 运算符"""
+        if isinstance(u, Unit):
+            v1 = self.V
+            v2 = u.V
+            delta = min(abs(v1),abs(v2))*1e-3
+            if v1>=v2:
+                return True
+            else:
+                return False
+        if isinstance(u, str):
+            return self>=Unit(u)
+        return self>=str(u)       
+
+    def __le__(self,u):
+        """重载 <= 运算符"""
+        if isinstance(u, Unit):
+            v1 = self.V
+            v2 = u.V
+            delta = min(abs(v1),abs(v2))*1e-3
+            if v1<=v2:
+                return True
+            else:
+                return False
+        if isinstance(u, str):
+            return self<=Unit(u)
+        return self<=str(u)
+
+
     def __abs__(self):
         return abs(self.V)
     
@@ -267,7 +299,7 @@ class Unit(object):
             s = s.replace(k+"unit",self.unitConv[k])
         return s
     
-    def convertoNewUnit(self,u=""):
+    def convertoNewUnit(self,u="",decimal = None):
         '''
         return string value of given unit
         '''
@@ -279,11 +311,13 @@ class Unit(object):
         
         if len(u.strip())<2:
             raise ValueError("New unit must not less then two letter ")
-        return "%s%s"%(self/Unit(u),u)
+        if decimal:
+            fmt = "%%.%df%%s"%decimal
+            return fmt%(self/Unit(u),u)
+        else:
+            return "%s%s"%(self/Unit(u),u)
     #short name for convertoNewUnit
 #     U = convertoNewUnit
-
-
 
 if __name__ == '__main__':
     u = Unit("60Gps+5m-2pf") 

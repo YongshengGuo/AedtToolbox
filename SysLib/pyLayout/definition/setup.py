@@ -1,5 +1,5 @@
 #--- coding:utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 2023-04-24
 
 '''
@@ -77,7 +77,7 @@ class Sweep(Definition):
         if self.parsed and not force:
             return
         
-        log.debug("parse primitive: %s"%self.name)
+        log.debug("parse Setup: %s"%self.name)
         SolveSetupType =  self.layout.Setups[self._info.setupName].SolveSetupType 
         
         maps = {}
@@ -142,21 +142,39 @@ class Sweeps(Definitions):
 
 class Setup(Definition):
 
-    maps = {
-        "AdaptiveFrequency":"AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/AdaptiveFrequency",
-        "DeltaS": "AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/MaxDelta",
-        "Order": {"Key":"AdvancedSettings/OrderBasis",
-                  "Set":lambda x:[-1,1,2][("mixed","first","second").index(x.lower())],
-                  "Get":lambda y:("mixed","first","second")[(-1,1,2).index(y)],
-                  },
-        "PortMaxDeltaZo":"AdvancedSettings/MaxDeltaZo",
-        "MaxPasses": "AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/MaxPasses"
-        }
+
     
     def __init__(self,name = None,layout=None):
-        
         super(self.__class__,self).__init__(name,type="Setup",layout=layout)
-
+        arrayMaps = {
+            # "AdaptiveFrequency":"AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/AdaptiveFrequency",
+            # "DeltaS": "AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/MaxDelta",
+            "Order": {"Key":"AdvancedSettings/OrderBasis",
+                    "Set":lambda x:[-1,1,2][("mixed","first","second").index(x.lower())],
+                    "Get":lambda y:("mixed","first","second")[(-1,1,2).index(y)],
+                    },
+            "PortMaxDeltaZo":"AdvancedSettings/MaxDeltaZo",
+            #for Siwave
+            "SISliderPos":"SimulationSettings/SISliderPos", #0:Speed, 1:Balanced, 2:Accurary
+            "PISliderPos":"SimulationSettings/PISliderPos", #0:Speed, 1:Balanced, 2:Accurary
+            }
+        self._info.update("arrayMaps",arrayMaps)
+        
+        self.maps = {
+            "DeltaS": {"Key":"self",
+                    "Set":lambda s,x:s.updateByKey("MaxDelta",x),
+                    "Get":lambda s:s["AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/MaxDelta"],
+                    },
+            "MaxPasses": {"Key":"self",
+                    "Set":lambda s,x:s.updateByKey("MaxPasses",x),
+                    "Get":lambda s:s["AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/MaxPasses"],
+                    },
+            "AdaptiveFrequency": {
+                "Key":"self",
+                "Set":lambda s,v:s._setAdaptiveFrequency(v),
+                "Get":lambda s: s["AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/AdaptiveFrequency"]
+            }
+        }
     
     @property
     def oModule(self):
@@ -170,26 +188,7 @@ class Setup(Definition):
     @property
     def Name(self):
         return self.name
-    
-    #--- setupName
-    
-#     def getData(self,path=None):
-#         datas = self.Info #ArrayStruct(self.oModule.GetSetupData(self.name),maps=self.maps)
-#         if not path:
-#             return datas
-#         return datas.get(path)
-#     
-#     def setData(self,path=None,value=None,arrayDatas = None):
-#         if arrayDatas: #arrayDatas has High priority
-#             self.oModule.Edit(self.name,arrayDatas)
-#             self._info = None
-#             return None
-#         
-#         datas = self.Info # ArrayStruct(self.oModule.GetSetupData(self.name))
-#         datas.set(path,value)
-#         self.oModule.Edit(self.name,datas.Array)
-#         #update Info
-#         self._info = None
+
     
     def parse(self,force = False):
         '''
@@ -200,12 +199,10 @@ class Setup(Definition):
             return
         
         log.debug("parse primitive: %s"%self.name)
-        self._info = ComplexDict()
-        
     
         datas = self.oModule.GetSetupData(self.name)
         if datas:
-            _array = ArrayStruct(tuple2list(datas),self.maps)
+            _array = ArrayStruct(tuple2list(datas),self._info.arrayMaps)
         else:
             _array = []
             
@@ -213,33 +210,82 @@ class Setup(Definition):
         self._info.update("Array", _array)
         
         self._info.update("Name",self.name)
-        maps = {}
+        maps = self.maps
         maps.update({"Sweeps":{
             "Key":"self",
             "Get":lambda s: Sweeps(layout=s.layout,setupName=s.name) #[Sweep(k,sweepName) for sweepName in self.oModule.GetSweeps(self.name)]
             }})
         
         self._info.setMaps(maps)
-        self._info.update("self", self)    
+        self._info.update("self", self)
         self.parsed = True
 
+    #---setup
+    def _setAdaptiveFrequency(self,freqData):
+        '''_summary_
 
+        Args:
+            freqData (_type_): "5Ghz" or "1Ghz:15Ghz" or "5Ghz,15Ghz,20Ghz"
+        '''
+        if not isinstance(freqData,(str)):
+            freqData = str(freqData)
+
+        if ":" in freqData:
+            #kBroadband
+            log.info("set Broadband frequency: %s"%freqData)
+            freqs = re.split(r"\s*:\s*",freqData)
+            if len(freqs) != 2:
+                log.exception("Invalid Broadband frequency data:%s"%freqData)
+            self["AdaptiveSettings/AdaptType"] = "kBroadband"
+            AdaptiveFrequencyData = self["AdaptiveSettings/BroadbandFrequencyDataList"]
+            AdaptiveFrequencyData[1][2] = freqs[0]
+            AdaptiveFrequencyData[2][2] = freqs[1]
+            self["AdaptiveSettings/BroadbandFrequencyDataList"] = AdaptiveFrequencyData.Datas
+        elif "," in freqData or ";" in freqData:
+            #kMultiFrequencies
+            log.info("set MultiFrequencies frequency: %s"%freqData)
+            freqs = re.split(r"\s*[,;]\s*",freqData)
+            if len(freqs) <2:
+                log.exception("Invalid MultiFrequencies frequency data:%s"%freqData)
+            self["AdaptiveSettings/AdaptType"] = "kMultiFrequencies"
+            DeltaS = self["AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/MaxDelta"]
+            MaxPasses = self["AdaptiveSettings/SingleFrequencyDataList/AdaptiveFrequencyData/MaxPasses"]
+            AdaptiveFrequencyData = ["NAME:MultiFrequencyDataList"]
+            for freq in freqs:
+                AdaptiveFrequencyData.append([
+                    "NAME:AdaptiveFrequencyData",
+                    "AdaptiveFrequency:="    , freq,
+                    "MaxDelta:="        , str(DeltaS),
+                    "MaxPasses:="        , int(MaxPasses),
+                    "Expressions:="        , []
+                ])
+            
+            self["AdaptiveSettings/MultiFrequencyDataList"] = AdaptiveFrequencyData
+        else:
+            self["AdaptiveSettings/AdaptType"] = "kSingleFrequency"
+            AdaptiveFrequencyData = self["AdaptiveSettings/SingleFrequencyDataList"]
+            AdaptiveFrequencyData[1][2] = freqData
+            self["AdaptiveSettings/SingleFrequencyDataList"] = AdaptiveFrequencyData.Datas
     #--- Sweep
     def findSweep(self,sweepName):
+        target = str(sweepName).lower()
         for swp in self.getSweepNames():
-            if swp.lower() == sweepName:
+            if swp.lower() == target:
                 log.info("Sweep exist: %s."%swp)
                 return swp
             
         return False
     
-    def addSweep(self,sweepName):
+    def addSweep(self,sweepName="Sweep1",sweepData=None):
+
+        #has bug for SIwave sweep
+
         swp = self.findSweep(sweepName)
         if swp:
             log.info("Sweep already exist: %s %s"%(self.name,sweepName))
-            return Sweep(swp,self.name)
+            return Sweep(swp,self.name,layout=self.layout)
 
-        log.info("Sweep already exist: %s %s"%(self.name,sweepName))
+        log.info("Add sweep: %s %s"%(self.name,sweepName))
 #         self.oModule.AddSweep(self.name,["NAME:%s"%sweepName])
         
         self.oModule.AddSweep(self.name, 
@@ -252,14 +298,14 @@ class Setup(Definition):
                 [
                     "NAME:Sweeps",
                     "Variable:="        , sweepName,
-                    "Data:="        , "LIN 0GHz 10GHz 0.01GHz",
+                    "Data:="        , sweepData if sweepData else "LIN 0GHz 10GHz 0.01GHz",
                     "OffsetF1:="        , False,
                     "Synchronize:="        , 0
                 ]
             ])
         
         
-        return Sweep(sweepName,self.name)
+        return self.Sweeps[sweepName]
         
     
     def delSweep(self,sweepName):
@@ -268,14 +314,15 @@ class Setup(Definition):
             self.oModule.DeleteSweep(self.name,swp)
     
     def getSweep(self,sweepName):
+        target = str(sweepName).lower()
         for swp in self.getSweepNames():
-            if swp.lower() == sweepName:
-                return Sweep(swp,self.name)
+            if swp.lower() == target:
+                return Sweep(swp,self.name,layout=self.layout)
         
         log.exception("Sweep not found: %s"%sweepName)
     
     def getAllSweeps(self):
-        return [Sweep(self.name,sweepName) for sweepName in self.oModule.GetSweeps(self.name)]
+        return [Sweep(sweepName,self.name,layout=self.layout) for sweepName in self.oModule.GetSweeps(self.name)]
     
     def getSweepNames(self):
         return self.oModule.GetSweeps(self.name)
@@ -294,10 +341,35 @@ class Setup(Definition):
         datas = ArrayStruct(self.oModule.GetSweepInfo(self.name,sweepName))
         datas.set(path,value)
         self.oModule.EditSweep(self.name,sweepName,datas.Array)
+        log.info("Set Sweep Data Success: %s"%(path))
+      
+    def delete(self):
+        oModule = self.layout.oDesign.GetModule("SolveSetups")
+        oModule.Delete(self.name)
+      
         
     #--- Analyze 
-    
+
     def analyze(self):
+        if self.layout.options["AEDT_WaitForLicense"]:
+            if self.layout.options["AEDT_HPC_NumCores"]:
+                cores = int(self.layout.options["AEDT_HPC_NumCores"])
+                self.layout.setCores(cores)
+            else:
+                oDesktop = self.layout.oDesktop
+                #worked
+                activeHPCOption = oDesktop.GetRegistryString("Desktop/ActiveDSOConfigurations/HFSS 3D Layout Design")
+                log.info("ActiveDSOConfigurations: %s"%activeHPCOption)
+                #oDesktop.SetRegistryString(r"Desktop/DSOConfigurationsEx/HFSS 3D Layout Design/%s/NumCores"%activeHPCOption)
+                activeHpcStr = oDesktop.GetRegistryString("Desktop/DSOConfigurationsEx/HFSS 3D Layout Design/%s"%activeHPCOption)
+                rst = re.findall(r"NumCores=(\d+)", activeHpcStr)
+                if rst:
+                    cores = int(rst[0])
+                else:
+                    cores = 0
+            if cores:
+                self.layout.waitForlicense([{"module":"HFSSSolver"},{"feature":"anshpc_pack","count":self.layout._getPackCount(cores)}])
+        
         self.oDesign.Analyze(self.name)
     
     def exportToHfss(self,path = None,timeout = 10*60):
@@ -468,8 +540,17 @@ class Setup(Definition):
         maxwell.oEditor.Paste()
         q3d.deleteDesign()
         log.info("Finished to export 3D Layout design to  Maxwell.")
-        
+
     
+    def exportProfile(self,profilePath):
+        self.layout.oDesign.ExportProfile(self.name, '', profilePath, '')
+        
+    def exportSnp(self):
+        sweeps = self.getAllSweeps()
+        for sweep in sweeps:
+            solutionName = "%s_%s"%(self.name,sweep.name)
+            self.layout.Solutions[solutionName].exportSNP()
+
     #--- mesh
 #         
 #     def addMeshOperationOnNets(self,nets,meshLength = '5mil'):
@@ -528,12 +609,6 @@ class Setups(Definitions):
         super(self.__class__,self).__init__(layout, type="Setup",definitionCalss=Setup)
     
     @property
-    def oModule(self):
-        if not self._manager:
-            self._manager = self.layout.oDesign.GetModule("SolveSetups")
-        return self._manager
-    
-    @property
     def DefinitionDict(self):
         if self._definitionDict is None:
             oModule = self.layout.oDesign.GetModule("SolveSetups")
@@ -546,12 +621,12 @@ class Setups(Definitions):
         if name in self.getAllSetupNames():
             log.info('setupName "%s" exist, will be not add'%name)
             oModule = self.layout.oDesign.GetModule("SolveSetups")
-            self.layout.Log.info('setupName "%s" exist, will be remove first.'%name)
+            log.info('setupName "%s" exist, will be remove first.'%name)
             oModule.Delete(name)
             oModule.Add(["NAME:%s"%name,"SolveSetupType:=", solutionType])
             
         else:
-            log.info('add setup: "%s type: %s "'%(name,solutionType))
+            log.info('add setup: "%s" type: %s'%(name,solutionType))
             oModule = self.layout.oDesign.GetModule("SolveSetups")
             oModule.Add(["NAME:%s"%name,"SolveSetupType:=", solutionType])
         
@@ -562,7 +637,7 @@ class Setups(Definitions):
 
     def getByName(self,name):
         if name in self.getAllSetupNames():
-            return Setup(name)
+            return Setup(name,layout=self.layout)
         else:
             log.exception('setupName "%s" not exist'%name)
     

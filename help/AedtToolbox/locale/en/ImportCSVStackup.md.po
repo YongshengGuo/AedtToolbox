@@ -1,0 +1,190 @@
+#
+msgid ""
+msgstr ""
+
+msgid "ImportCSVStackup"
+msgstr ""
+
+msgid "Stackup->ImportCSVStackup"
+msgstr ""
+
+msgid ""
+"通过CSV文件快速导入加工厂给定的叠层。可以把工厂提供的xlsx文件按照提供的CSV模板格式输出成文件做输入即可。列的顺序不限，不在定义内的列会被忽略。"
+msgstr ""
+
+msgid ""
+"需要按照提供的CSV模板填写叠层信息。然后在Toolbox上右键，选择Stackup->ImportCSVStackup，选择已经填写好的CSV叠层模板，进行导入。"
+" 在ImportCSVStackup.py目录下提供了\"CsvStackupTemp_full.csv\" 和 "
+"\"CsvStackupTemp_simple.csv\"两个模板可供使用。"
+msgstr ""
+
+msgid "模板格式"
+msgstr ""
+
+msgid "Layer"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "Thickness(mil)"
+msgstr ""
+
+msgid "Cond"
+msgstr ""
+
+msgid "DK"
+msgstr ""
+
+msgid "DF"
+msgstr ""
+
+msgid "Roughness"
+msgstr ""
+
+msgid "UNNAMED_000"
+msgstr ""
+
+msgid "dielectric"
+msgstr ""
+
+msgid "0"
+msgstr ""
+
+msgid "3.7"
+msgstr ""
+
+msgid "0.15"
+msgstr ""
+
+msgid "0.5um"
+msgstr ""
+
+msgid "TOP"
+msgstr ""
+
+msgid "signal"
+msgstr ""
+
+msgid "1.9"
+msgstr ""
+
+msgid "UNNAMED_002"
+msgstr ""
+
+msgid "2.65"
+msgstr ""
+
+msgid "3.5"
+msgstr ""
+
+msgid "0.004"
+msgstr ""
+
+msgid "PWR"
+msgstr ""
+
+msgid "1.3"
+msgstr ""
+
+msgid "UNNAMED_004"
+msgstr ""
+
+msgid "50"
+msgstr ""
+
+msgid "LYR_1"
+msgstr ""
+
+msgid "1.2"
+msgstr ""
+
+msgid "UNNAMED_006"
+msgstr ""
+
+msgid "8"
+msgstr ""
+
+msgid "LYR_2"
+msgstr ""
+
+msgid "UNNAMED_008"
+msgstr ""
+
+msgid "GND"
+msgstr ""
+
+msgid "UNNAMED_010"
+msgstr ""
+
+msgid "BOTTOM"
+msgstr ""
+
+msgid "UNNAMED_012"
+msgstr ""
+
+msgid "说明："
+msgstr ""
+
+msgid "Layer, Type,Thickness必须指定, 未指定的行将被忽略。"
+msgstr ""
+
+msgid "Cond, DK, DF如果缺失或者为给定数值，默认会使用Copper和FR4_epoxy替代"
+msgstr ""
+
+msgid "Thickness可以使用()指定单位，或者在数值中直接使用单位。"
+msgstr ""
+
+msgid "Roughness为可选属性，Groiss格式: 0.5um, huray格式: 0.5um;2.9"
+msgstr ""
+
+msgid "可选属性"
+msgstr ""
+
+msgid "Thickness：厚度，需要带单位。或者在标题上使用全局单位，比如Thickness(mil) or Thickness(mm)"
+msgstr ""
+
+msgid "Material：指定系统库里面的材料名称，比如Copper，此时Cond/DK/DF被忽略"
+msgstr ""
+
+msgid "FillMaterial:指定系统库里面的材料名称，比如FR-4，此时Cond/DK/DF被忽略"
+msgstr ""
+
+msgid "Cond/DK/DF 如果指定，且未指定Material或FillMaterial，自动根据参数生成新材料"
+msgstr ""
+
+msgid "Roughness：指定粗糙度，Groiss格式0.5um, huray格式：0.5um;2.9 or 0.5um,2.9"
+msgstr ""
+
+msgid "EtchFactor: 蚀刻系数，正值为Top蚀刻，负值为Bottom蚀刻"
+msgstr ""
+
+msgid "CSV中的金属层数量必须和PCB里面的相同，否则无法更新。"
+msgstr ""
+
+msgid "CSV的介质层数量不要求和PCB里面的相同，如果介质层数不同，CSV的介质层强制覆盖PCB中的介质层。"
+msgstr ""
+
+msgid "附加说明"
+msgstr ""
+
+msgid ""
+"此选项可以配合ExportCSVStackup使用，先快速导出CSV文件模板，然后按照现有的叠层文件信息进行修改，再使用ImportCSVStackup导入。"
+msgstr ""
+
+msgid "案例展示"
+msgstr ""
+
+msgid "从加工厂获取的Excel叠层文件 ![Excel stackup](images/image%5B4%5D.png)"
+msgstr ""
+
+msgid ""
+"使用ExportCSVStackup导出现有叠层模板 ![ExportCSVStackup](images/image-1%5B3%5D.png)"
+msgstr ""
+
+msgid ""
+"使用ImportCSVStackup导入修改后的CSV文件 ![ImportCSVStackup](images/image-2%5B1%5D.png)"
+msgstr ""
+
+msgid "日志信息 ![log](images/image-3%5B1%5D.png)"
+msgstr ""

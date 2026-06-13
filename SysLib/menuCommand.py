@@ -17,7 +17,7 @@ try:
     from tidyWinAPI import winAPI
 except:
     print("import tidyWinAPI error.")
-    
+sys.path.insert(0,r"C:\work\Study\Script\Ansys\quickAnalyze\FastSim") #for debug    
 
 clr.AddReference("System.Diagnostics.Process")
 from System.Diagnostics import Process
@@ -192,8 +192,8 @@ class MenuCommand(object):
 
 
 if __name__ == "__main__":
-    menucmd = MenuCommand.getMenuFromActiveAEDT()
-    menucmd.menuInfo.findNode("Toolkit")
+    # menucmd = MenuCommand.getMenuFromActiveAEDT()
+    # menucmd.menuInfo.findNode("Toolkit")
     # from activeDesktop import getActiveDesktop
     # oDesktop = getActiveDesktop()
     # print(oDesktop.GetExeDir())
@@ -203,12 +203,12 @@ if __name__ == "__main__":
     # hMenu = menuCmd.getMenu(hwnd)
     # menuInfo = menuCmd.getMenuInfo(hMenu)
 
-#     menuCmd = menuCommand()
-#     hwnd = menuCmd.GetHwndFromProcessID(oDesktop.GetProcessID())
-#     hMenu = menuCmd.getMenu(hwnd)
-#     menuList = menuCmd.getMenuIdList(hMenu)
-#     print(menuCmd.menuIdList)
-#     menuCmd.invokedMenuByName("EndCap")
+    menuCmd = menuCommand()
+    hwnd = menuCmd.GetHwndFromProcessID(oDesktop.GetProcessID())
+    hMenu = menuCmd.getMenu(hwnd)
+    menuList = menuCmd.getMenuIdList(hMenu)
+    print(menuCmd.menuIdList)
+    menuCmd.invokedMenuByName("EndCap")
     pass
 
 

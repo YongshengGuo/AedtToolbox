@@ -1,21 +1,20 @@
 #coding:utf-8
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230410
 
-
+import sys
 import math
 from ..common.unit import Unit
 from ..common.common import log
 
 class Point(object):
-    layout = None
-    def __init__(self,pt = None,layout = None, arc = False):
+    def __init__(self,pt = None,arc = False,layout = None):
         '''
         pt: list,tuple,"x,y",Point, 3DL Point
         '''
         
-        
+        self.layout = layout
         self.x = 0
         self.y = 0
         self.arc = arc
@@ -23,7 +22,7 @@ class Point(object):
         if isinstance(pt, (list,tuple)):
             self.x = pt[0]
             self.y = pt[1]
-        elif "ADispatchWrapper" in str(type(pt)):
+        elif "Wrapper" in str(type(pt)) or "Dispatch" in str(type(pt)):
             self.x = pt.GetX()
             self.y = pt.GetY()
         elif isinstance(pt, self.__class__):
@@ -39,7 +38,12 @@ class Point(object):
             log.debug("Point init error")
             
         if layout:
-            self.__class__.layout = layout
+            self.layout = layout
+        else:
+            try:
+                self.layout = sys.modules["__main__"].layout
+            except:
+                self.layout = None #for edbApp
             
     def __getitem__(self, key):
         """
@@ -69,8 +73,8 @@ class Point(object):
         log.exception("Point key error: %s"%str(key))
         
     def __getattr__(self,key):
-        if key in ["x","y","arc"]: #not key.lower()
-            return object.__getattr__(self,key)
+        if key in ["x","y","arc","layout"]: #not key.lower()
+            return object.__getattribute__(self,key)
         else:
             log.debug("__getattr__ from __getitem__: %s"%key)
             return self[key]
@@ -81,9 +85,14 @@ class Point(object):
         
     def __len__(self):
         return 2
+    
+    def __abs__(self):
+        return (self.xvalue**2+self.yvalue**2)**0.5
         
     @property
     def H3DLPoint(self):
+        if not self.layout or not self.layout.oEditor:
+            return
         pt3DL = self.layout.oEditor.Point().Set(self.x,self.y)
         if self.arc:
             pt3DL.SetArc(True)
@@ -116,13 +125,14 @@ class Point(object):
         
     def distanceFromPoint(self,pt):
         pt2 = self.__class__(pt)
-        return ((self.x-pt2.x)**2 + (self.y-pt2.y)**2)**0.5
+        dx = Unit(self.x).V - Unit(pt2.x).V
+        dy = Unit(self.y).V - Unit(pt2.y).V
+        return (dx**2 + dy**2)**0.5
     
     
 class Polygen(object):
     
-    layout = None
-    def __init__(self,pts = None,layout = None,closed = True):
+    def __init__(self,pts = None,closed = True,layout = None):
         '''
         pts: [[x1,y1],[x2,y2]]
         '''
@@ -136,12 +146,19 @@ class Polygen(object):
                 else:
                     #pt is list or tuple
                     self.points.append(Point(pt))
-                    
         if layout:
-            self.__class__.layout = layout
+            self.layout = layout
+        else:
+            try:
+                self.layout = sys.modules["__main__"].layout
+            except Exception:
+                self.layout = None
     
     @property
     def H3DLPolygen(self):
+        if not self.layout or not self.layout.oEditor:
+            return
+        
         ply = self.layout.oEditor.Polygon()
         for pt in self.points:
             ply.AddPoint(pt.H3DLPoint)
@@ -154,8 +171,10 @@ class Polygen(object):
         n = len(self.points)
         perimeter = 0
         for i in range(n):
-            x1, y1 = self.points[i].XY
-            x2, y2 = self.points[(i+1) % n].XY
+            x1 = Unit(self.points[i].x).V
+            y1 = Unit(self.points[i].y).V
+            x2 = Unit(self.points[(i+1) % n].x).V
+            y2 = Unit(self.points[(i+1) % n].y).V
             side_length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
             perimeter += side_length
             
@@ -165,14 +184,16 @@ class Polygen(object):
         n = len(self.points)
         area = 0
         for i in range(n):
-            x1, y1 = self.points[i].XY
-            x2, y2 = self.points[(i+1) % n].XY
+            x1 = Unit(self.points[i].x).V
+            y1 = Unit(self.points[i].y).V
+            x2 = Unit(self.points[(i+1) % n].x).V
+            y2 = Unit(self.points[(i+1) % n].y).V
             area += (x1 * y2 - x2 * y1) / 2
         return area
     
     def getCenter(self):
-        x = sum([pt.x for pt in self.points])/len(self.points)
-        y = sum([pt.y for pt in self.points])/len(self.points)
+        x = sum([Unit(pt.x).V for pt in self.points])/len(self.points)
+        y = sum([Unit(pt.y).V for pt in self.points])/len(self.points)
         return x,y
 
     @classmethod

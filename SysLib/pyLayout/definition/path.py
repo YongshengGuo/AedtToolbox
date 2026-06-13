@@ -1,330 +1,371 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20241219
 
-
-
-'''Path Object
-
+'''
+Optimized Path Search for Power Tree (BFS for Shortest Path)
+1. Supports multiple VRMs (startNodes) and Sinks (endNodes).
+2. Uses BFS to ensure shortest path is found first.
+3. Filters:
+   - Exclude Capacitors (unless explicitly in includeComps).
+   - Exclude components with PinCount > maxPinCount UNLESS they are PTH (R, L, FB) OR in includeComps.
+   - Exclude nets matching excludedNets patterns.
+   - Stop when Sink is reached (Shortest path retained).
+   - FORCE INCLUDE components in includeComps.
+4. Optimization:
+   - Once a specific Sink (Component:Net) is found, ignore subsequent attempts to reach it.
+   - Outputs the actual max search depth reached.
 '''
 
-
 import re
-from ..common.common import log,regAnyMatch
+from collections import deque
+from ..common.common import log, regAnyMatch
 from ..common.complexDict import ComplexDict
-
+from ..primitive.pin import Pin
 
 class Node(ComplexDict):
     '''
     Composed of pins objects
-    node Type: VRM,Sink, Mid, Start, End
+    node Type: VRM, Sink, Mid, Start, End
     '''
-    maps = {}
-    def __init__(self,node):
+    def __init__(self, node):
+        if isinstance(node, Node):
+            super(self.__class__, self).__init__()
+            self.update(node)
+            return
         
-        if isinstance(node,Node):
-            return node
-        elif isinstance(node,(list,tuple)):
-            component,net = node
+        if isinstance(node, (list, tuple)):
+            component, net = node
         else:
-            log.exception("node must be Node,list,tuple")
-            
-        super(self.__class__,self).__init__()
-#         self.update("Pins",[])
+            log.exception("node must be Node, list, or tuple")
+            return
+
+        super(self.__class__, self).__init__()
+        
         self.updates({
-            "Component":component,
+            "Component": component,
             "Net": net,
-            "Type":"Mid", #Start, Mid, End
-            "Previous":[],
-            "Next":[]
-            })
+            "Type": "Mid",  # Start, Mid, End
+            "Previous": [],
+            "Next": []
+        })
         
         self.update("self", self)
         
-        maps = {"name":{
-            "Key":"self",
-            "Get":lambda s:"%s:%s"%(s.Component,s.Net)
-            }}
+        maps = {"name": {
+            "Key": "self",
+            "Get": lambda s: "%s:%s" % (s.Component, s.Net)
+        }}
         self.setMaps(maps)
+
+    def __eq__(self, other):
+        if not isinstance(other, Node):
+            return False
+        return self.Component == other.Component and self.Net == other.Net
+
+    def __hash__(self):
+        return hash((self.Component, self.Net))
 
 
 class Path(object):
-    '''_summary_
+    '''
+    Optimized Path finder supporting multiple starts and ends using BFS.
     '''
     
-    def __init__(self,startNode = None, endNodes = None,includeComps=None,excludedNets=None,layout=None):
-        self._startNode = startNode
-        self._endNodes = endNodes
-        if excludedNets:
-            self.excludedNets = excludedNets
-        else:
-            self.excludedNets = [".*GND"]
+    def __init__(self, startNodes=None, endNodes=None, includeComps=None, excludedNets=None, layout=None):
+        self._startNodes = []
+        self._endNodes = []
         
-        if includeComps:
-            self.includeComps = includeComps
-        else:
-            self.includeComps = []
+        # Default excluded nets
+        self.excludedNets = excludedNets if excludedNets else [".*GND.*"]
+        
+        # Additional components to force include
+        self.includeComps = includeComps if includeComps else []
 
-        self.PTH = ["R.*","L.*","FB.*"]
+        # Pass-Through-Hole components pattern (Resistor, Inductor, Ferrite Bead)
+        self.PTH_PATTERNS = ["R.*", "L.*", "FB.*"]
         
-#         self.maxRes = 50
         self.maxPinCount = 4
+        self._maxSearchDepthLimit = 10  # Limit to prevent infinite loops
+        self._actualMaxDepth = 0         # Track actual depth reached
         
         self.layout = layout
-        self.nodes = []
+        self.nodes = []  # All unique nodes found in the path tree
+        self._visited = set()  # Track visited (Component, Net) to avoid cycles
+        self._foundSinks = set() # Track names of sinks already found
         
-#     def addNode(self,node):
-#         self.nodes.append(node)
-    
+        # Initialize nodes if provided
+        if startNodes:
+            self.startNodes = startNodes
+        if endNodes:
+            self.endNodes = endNodes
+
     @property
-    def startNode(self):
-        return self._startNode
-    @startNode.setter
-    def startNode(self,node):
-        self._startNode = Node(node)
-    
+    def startNodes(self):
+        return self._startNodes
+
+    @startNodes.setter
+    def startNodes(self, nodes):
+        self._startNodes = []
+        for node in nodes:
+            n = Node(node)
+            n.Type = "Start"
+            self._startNodes.append(n)
+            
     @property
     def endNodes(self):
         return self._endNodes
+
     @endNodes.setter
-    def endNodes(self,nodes):
-        
-        #remove dumplicate node
-        path = Path()
+    def endNodes(self, nodes):
+        self._endNodes = []
+        seen = set()
         for node in nodes:
-            path.insertNode(Node(node)) #will remove dumplicate node automation
-        self._endNodes = path.nodes
-    
+            n = Node(node)
+            # Avoid duplicate end nodes
+            if n.name not in seen:
+                n.Type = "End"
+                self._endNodes.append(n)
+                seen.add(n.name)
+
     @property
     def nets(self):
-        return list(set([n.net for n in self.nodes]))
+        return list(set([n.Net for n in self.nodes]))
     
     @property
     def comps(self):
         return list(set([n.Component for n in self.nodes]))
     
-    def insertNode(self,node,loc=None,pos="Next"):
+    def insertNode(self, node, parent=None):
+        """
+        Adds node to the global list and links it to the parent.
+        Returns the node instance stored in self.nodes (either new or existing).
+        """
+        # Check if node already exists in our global collection by name
+        existing_node = None
+        for n in self.nodes:
+            if n.name == node.name:
+                existing_node = n
+                break
         
-        if len(self.nodes)==0:
-            log.info("Add node %s as start node."%node.name)
-            node.Type = "Start"
-            self.nodes.append(node)
-            return
-        
-        if self.hasNode(node):
-            log.info("Node already in the path: %s"%node.name)
-            return
+        if existing_node:
+            # Link parent to existing node if not already linked
+            if parent and existing_node not in parent.Next:
+                parent.Next.append(existing_node)
+                if parent not in existing_node.Previous:
+                    existing_node.Previous.append(parent)
+            return existing_node
         else:
             self.nodes.append(node)
-        
+            if parent:
+                parent.Next.append(node)
+                node.Previous.append(parent)
+            return node
 
-        
-        if not loc:
-            loc = self.nodes[0]
-
-        if pos.lower() == "next":
-            loc.Next.append(node)
-            node.Previous.append(loc)
-        elif pos.lower() == "previous":
-            loc.Previous.append(node)
-            node.Next.append(loc)
-    
-        else:
-            log.info("insert node pos must be Next or Previous, input %s"%pos)
-            
-    
-    def removeNode(self,node):
-        log.info("Remove node %s"%node.name)
-        self.nodes.remove(node)
-        for node2 in node.Next:
-            node2.Previous.remove(node)
-        for node2 in node.Previous:
-            node2.Next.remove(node)
-    def hasNode(self,node):
-        for node2 in self.nodes:
-            if node.name == node2.name:
-                return True
-        
-        return False
-    
     def search(self):
-        if not self.startNode:
-            log.info("StartNode must set before search path.")
+        if not self._startNodes:
+            log.info("StartNodes must be set before search path.")
             return None
-        if not self.endNodes:
-            log.info("EndNodes must set before search path.")
+        if not self._endNodes:
+            log.info("EndNodes must be set before search path.")
             return None
-        log.info("Search path from %s to %s"%(self.startNode.name,self.endNodes[0].name))
+        
+        log.info("Starting BFS path search from %d sources to %d sinks." % (len(self._startNodes), len(self._endNodes)))
+        
+        # Reset state
         self.nodes = []
-        self.nodes.append(self.startNode) 
-        self.startNode.Type = "Start"
-        self._searchPath()
-        self.removeInvalidNodes()
+        self._visited = set()
+        self._foundSinks = set()
+        self._actualMaxDepth = 0
+        
+        # Create a map of end nodes for quick lookup: Key: Component, Value: List of Nodes
+        self._endNodeMap = {}
+        for en in self._endNodes:
+            if en.Component not in self._endNodeMap:
+                self._endNodeMap[en.Component] = []
+            self._endNodeMap[en.Component].append(en)
 
-    def removeInvalidNodes(self):
-        flag = True
-        while(flag):
-            flag = False
-            for node in self.nodes:
-                if node.Type.lower() in ["end","start"]:
+        # Initialize Queue for BFS: (Node, Depth)
+        queue = deque()
+        
+        for startNode in self._startNodes:
+            insertedStart = self.insertNode(startNode)
+            self._visited.add((startNode.Component, startNode.Net))
+            queue.append((insertedStart, 0))
+            
+        # Perform BFS
+        while queue:
+            currentNode, depth = queue.popleft()
+            
+            # Update actual max depth
+            if depth > self._actualMaxDepth:
+                self._actualMaxDepth = depth
+                
+            # Check depth limit
+            if depth >= self._maxSearchDepthLimit:
+                continue
+            
+            self._bfs_step(currentNode, depth, queue)
+
+        self.removeInvalidNodes()
+        log.info("Search complete. Found %d nodes. Max Depth Reached: %d/%d" % (len(self.nodes), self._actualMaxDepth,self._maxSearchDepthLimit))
+
+    def _bfs_step(self, currentNode, depth, queue):
+        """
+        Process one step of BFS: find neighbors and add to queue.
+        """
+        net = currentNode.Net
+        startComp = currentNode.Component
+        
+        # Get all pins on this net
+        if net not in self.layout.Nets:
+            return
+            
+        pins = self.layout.Nets[net].Objects.Pins
+        if not pins:
+            return
+
+        # Get unique components connected to this net, excluding the current component
+        comps = set()
+        for p in pins:
+            try:
+                pinObj = Pin(p, self.layout)
+                compName = pinObj.CompName
+                if compName and compName != startComp:
+                    comps.add(compName)
+            except:
+                continue
+
+        for comp in comps:
+            # 1. Check if this component is a Sink (End Node)
+            isSink = False
+            if comp in self._endNodeMap:
+                for endNodeCandidate in self._endNodeMap[comp]:
+                    if endNodeCandidate.Net == net:
+                        sinkName = endNodeCandidate.name
+                        
+                        # If this sink was already found, skip
+                        if sinkName in self._foundSinks:
+                            continue
+                        
+                        # Found a new sink (Shortest path guaranteed by BFS)
+                        endNode = Node([comp, net])
+                        endNode.Type = "End"
+                        self.insertNode(endNode, currentNode)
+                        
+                        # Mark as found
+                        self._foundSinks.add(sinkName)
+                        isSink = True
+                        # Do not traverse further from a Sink, so we don't add to queue
+                        break 
+            
+            if isSink:
+                continue
+
+            # 2. Filter Components for Traversal
+            
+            # Get component properties
+            compObj = self.layout.Components.get(comp)
+            if not compObj:
+                continue
+                
+            partType = compObj.PartType
+            pinCount = compObj.PinCount
+            
+            # Check if component is forced included
+            isForcedInclude = comp in self.includeComps
+            
+            # Check if it's a PTH component (Resistor, Inductor, FB)
+            isPth = regAnyMatch(self.PTH_PATTERNS, comp)
+            
+            # Filtering Logic:
+            if not isForcedInclude:
+                # Exclude Capacitors
+                if partType == "Capacitor":
                     continue
                 
-                if not node.Next or not node.Previous:
-                    self.removeNode(node)
-                    flag = True
-    
-    def _searchPath(self,startNode=None,endNodes=None):
-        
-        if not startNode:
-            startNode = self.startNode
-            
-        if not endNodes:
-            endNodes = self.endNodes
-        
-        net = startNode.Net
-        startComp = startNode.Component
-        endComps = [node.Component for node in endNodes]
-        
-        #layout.oEditor.FilterObjectList('Type','component',layout.oEditor.FindObjects('Net','BST_V1P5_S5')) 
-        #return error components
-    #     comps = layout.Nets[net].Objects.Components
-        pins = self.layout.Nets[net].Objects.Pins
-        comps = [self.layout.Pins[p].CompName for p in pins]
-        comps = list(set(comps))
-        
-        
-        newComps = []
-        #comp is refdes
-        for comp in comps:
-            if comp == startComp:
-                continue
-            
-            #if capacitor, ignor
-            if self.layout.Components[comp].PartType in ["Capacitor"]:
-                continue
-            
-            #include comps in includeComps for first
-            if comp in self.includeComps:
-                newComps.append(comp)
-                continue
-            
-            #if is endComps, remove
-            flag = False
-            for node in endNodes:
-                if node.Component == comp and node.Net == net:
-                    # newNode = Node(comp,net)
-                    node.Type = "End"
-                    node.Previous = []
-                    node.Next = []
-                    self.insertNode(node,startNode,pos="Next")
-                    flag = True
-                    break
-            if flag:
-                endNodes = [node for node in endNodes if not (node.Component == comp and node.Net == net)]
-                continue
-            
-            #ingor comps with more than maxPinCount
-            if self.layout.Components[comp].PinCount>self.maxPinCount:
-                continue            
-            
-            #if comp in PTH
-            if regAnyMatch(self.PTH,comp):
-                newComps.append(comp)
-            
-        if not newComps:
-            return 
-        
-        for comp in newComps:
-            for newNet in self.layout.Components[comp].NetNames:
+                # Exclude high pin count components unless they are PTH
+                if not isPth and pinCount > self.maxPinCount:
+                    continue
+
+            # 3. Traverse Nets of this Component
+            for newNet in compObj.NetNames:
                 if newNet == net:
                     continue
-                if regAnyMatch(self.excludedNets,newNet):
+                
+                # Exclude specific nets (e.g., GND)
+                if regAnyMatch(self.excludedNets, newNet):
                     continue
                 
-                newNode = Node([comp,newNet])
+                # Check Cycle/Visited
+                nodeKey = (comp, newNet)
+                # print(nodeKey)
+                if nodeKey in self._visited:
+                    continue
                 
-                #exit recursive if node already exist
-                #known issue here, Unable to display cyclic issues among components; when multiple resistors or inductors are connected in parallel, only one of the components can be displayed.
-                if self.hasNode(node):
-                    log.info("Node already in the path: %s"%node.name)
-#                     self.insertNode(newNode,startNode)
-                    return
-                else:
-                    self.insertNode(newNode,startNode)
-                    self._searchPath(newNode, endNodes)
+                # Mark as visited
+                self._visited.add(nodeKey)
+                
+                # Create new Node
+                newNode = Node([comp, newNet])
+                insertedNode = self.insertNode(newNode, currentNode)
+                
+                # Add to queue for next level processing
+                queue.append((insertedNode, depth + 1))
 
-    def printTree(self,startNode=None,prefix='    '):
-        if not startNode:
-            startNode = self.startNode
-            log.info("Power Tree:")
-            log.info(startNode.name)
-        # 遍历所有项
+    def removeInvalidNodes(self):
+        """
+        Remove nodes that are not connected to either Start or End properly 
+        (i.e., dead ends that are not Sinks).
+        """
+        changed = True
+        while changed:
+            changed = False
+            nodesToRemove = []
+            for node in self.nodes:
+                if node.Type in ["Start", "End"]:
+                    continue
+                
+                if not node.Next and not node.Previous:
+                    nodesToRemove.append(node)
+                    changed = True
+                elif not node.Next and node.Type != "End":
+                    # Dead end that isn't a sink
+                    nodesToRemove.append(node)
+                    changed = True
+                    
+            for node in nodesToRemove:
+                self.removeNode(node)
+
+    def removeNode(self, node):
+        if node in self.nodes:
+            self.nodes.remove(node)
         
+        # Clean up links
+        for prevNode in node.Previous:
+            if node in prevNode.Next:
+                prevNode.Next.remove(node)
+        
+        for nextNode in node.Next:
+            if node in nextNode.Previous:
+                nextNode.Previous.remove(node)
+                
+        node.Previous.clear()
+        node.Next.clear()
+
+    def printTree(self, startNode=None, prefix='    '):
+        if not startNode:
+            if not self._startNodes:
+                return
+            log.info("Power Tree:")
+            for sn in self._startNodes:
+                log.info(sn.name)
+                self.printTree(sn, prefix)
+            return
+
         if not startNode.Next:
             return
 
         for item in startNode.Next:
-            log.info("%s|__ %s"%(prefix,item.name))
+            log.info("%s|__ %s (%s)" % (prefix, item.name, item.Type))
             self.printTree(item, prefix + '    ')
-     
-
-def searchPath(startNode,endNodes,layout,PTH=["R.*","L.*"],excludedNets = [".*GND"],path=None):
-    if not path:
-        path = Path()
-        path.insertNode(startNode)
-    
-    net = startNode.Net
-    startComp = startNode.Component
-    endComps = [node.Component for node in endNodes]
-    
-    #layout.oEditor.FilterObjectList('Type','component',layout.oEditor.FindObjects('Net','BST_V1P5_S5')) 
-    #return error components
-#     comps = layout.Nets[net].Objects.Components
-    pins = layout.Nets[net].Objects.Pins
-    comps = [layout.Pins[p].CompName for p in pins]
-    comps = list(set(comps))
-    
-    
-    newComps = []
-    
-    #comp is refdes
-    for comp in comps:
-        if comp == startComp:
-            continue
-        
-        #if is endComps, remove
-        if comp in endComps:
-            newNode = Node(comp,net)
-            newNode.Type = "End"
-            path.insertNode(newNode,startNode,pos="Next")
-            
-            if comp in endComps:
-                endNodes = [node for node in endNodes if node.Component != comp]
-            continue
-        
-        #if comp in PTH
-        if regAnyMatch(PTH,comp):
-            newComps.append(comp)
-        
-#         for each in PTH:
-#             if re.match(each+"$", comp):
-#                 #add new comps
-#                 newComps.append(comp)
-    
-    if not newComps:
-        return path
-    
-    for comp in newComps:
-        for newNet in layout.Components[comp].NetNames:
-            if newNet == net:
-                continue
-            if regAnyMatch(excludedNets,newNet):
-                continue
-            
-            newNode = Node(comp,newNet)
-            path.insertNode(newNode,startNode)
-            searchPath(newNode, endNodes, layout,PTH,excludedNets,path)
-    
-    return path
-
-        

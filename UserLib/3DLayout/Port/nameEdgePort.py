@@ -28,7 +28,7 @@ def main():
     # layout1.openAedt(r"C:\work\Project\AE\Script\packageOnPCB\PCB.aedt")
     layout.initDesign()
     
-    for port in layout.Ports.All:
+    for port in list(layout.Ports.All):
         port.autoRename()
 #         #already is named port, skip
 #         if "." in port.Name:

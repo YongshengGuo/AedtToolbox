@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20240317
 
 import re
@@ -49,7 +49,7 @@ class Object3DModle(object):
     def __getattr__(self,key):
 
         if key in ["app","name","_info","maps","parsed"]:
-            return object.__getattr__(self,key)
+            return object.__getattribute__(self,key)
         else:
             log.debug("__getattr__ from _dict: %s"%key)
             return self[key]
@@ -216,7 +216,7 @@ class Object3DModle(object):
                 "Selections:="        , self.name
             ])
 
-        self.app.Primitives.pop(self.name)
+        self.app.Objects.pop(self.name)
 
     def update(self):
         self._info = None #delay update
@@ -270,7 +270,7 @@ class Objects3DModle(object):
             #just for debug run
             return None
         if key in ["app","_objectDict"]:
-            return object.__getattr__(self,key)
+            return object.__getattribute__(self,key)
         else:
             log.debug("__getattr__ from _dict: %s"%key)
             return self[key]
@@ -320,7 +320,7 @@ class Objects3DModle(object):
         return self.ObjectDict.Keys
     
     def filter(self, func):
-        return filter(func,self.ObjectDict)
+        return dict(filter(func,self.ObjectDict.items()))
     
         
     def refresh(self):
@@ -328,9 +328,13 @@ class Objects3DModle(object):
 
         
     def push(self,name):
-        self._objectDict.update(name,self.primitiveClass(name,layout=self.app))
+        if self._objectDict is None:
+            self._objectDict = ComplexDict()
+        self._objectDict.update(name,Object3DModle(name,app=self.app))
     
     def pop(self,name):
+        if self._objectDict is None:
+            return
         del self._objectDict[name]
         
 
@@ -352,8 +356,8 @@ class Objects3DModle(object):
     
     def getUniqueName(self,prefix=""):
         
-        if prefix == None:
-            prefix = "%s_"%self.type
+        if prefix is None:
+            prefix = "Object_"
             
         for i in range(1,100000):
             name = "%s%s"%(prefix,i)

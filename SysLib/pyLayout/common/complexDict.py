@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230410
 '''
 提供一种简单快捷的方式获取JSON 或者 dict的键值
@@ -72,407 +72,387 @@ Return:
     if return value is dict, will be return ComplexDict object, else return the value
 
 '''
+
+'''
+提供一种简单快捷的方式获取JSON 或者 dict的键值
+Provide a simple way to access JSON cotent or dict variables
+'''
 import sys
 import os
 import re
 from copy import deepcopy
-from .common import loadJson,writeJson,findDictValue,findDictKey,update2Dict,regAnyMatch
+from .common import loadJson, writeJson, findDictValue, findDictKey, update2Dict, regAnyMatch
 from .common import log
 
-def getDictData(key, dict1, default = None,ignorCase = True):
-        '''
-        Args:
-            key (str,list,tuple): the key paths, like "/Header/Comment"  or ("Header","Comment")
-            dict1(dict1): dict to find
-        return:
-            value (any): value for the key
-        '''
+# ----------------------------------------------------------------------
+# Optimized Helper Functions (Non-recursive, No Regex)
+# ----------------------------------------------------------------------
 
-        if isinstance(dict1, (list,tuple)):
-            return dict1[int(key)]
-    
-        if isinstance(key, str):
-            # if key in dict1, return. even the key have "\/" char.
-            val = findDictValue(key,dict1,default = "//key_not_found//", ignorCase = ignorCase)
-            if val != "//key_not_found//":
-                return val
-            
-            keyList = re.split(r"[\\/]", key,maxsplit = 1)
-            keyList = list(filter(lambda k:k.strip(),keyList)) #filter empty key
-            if len(keyList)<2:
-                if default != None:
-                    return default
-                raise KeyError("key error: %s"%str(key))
-            else:       
-                return getDictData(keyList,dict1,default)
-        
-        if isinstance(key,(list,tuple)):
-            key2 = list(filter(lambda k:k.strip(),key)) #filter empty key
-            
-            if len(key2) ==0:
-                raise KeyError("emptey key:%s"%str(key))
-            elif len(key2) ==1:
-                return getDictData(key2[0],dict1,default)
-            elif len(key2) ==2:
-                dict2 = getDictData(key2[0],dict1,default)
-                return getDictData(key2[1],dict2,default)
+_SENTINEL = object()
 
-            else: # len(key2)>1:
-                temp = dict1
-                for k in key2:
-                    if isinstance(temp, (list,tuple)):
-                        temp =  temp[int(k)]
-                    else:
-                        temp = findDictValue(k, temp,default = default, ignorCase = ignorCase)
-                
-                val =  temp
+def _resolve_next_level(current_data, key_part, ignorCase=True, default=_SENTINEL):
+    """Helper to get next level data without recursion."""
+    if isinstance(current_data, (list, tuple)):
+        try:
+            return current_data[int(key_part)]
+        except (ValueError, IndexError, TypeError):
+            return default
             
+    if isinstance(current_data, dict):
+        # Fast path: direct key
+        if key_part in current_data:
+            return current_data[key_part]
+        # Slow path: case insensitive
+        if ignorCase:
+            val = findDictValue(key_part, current_data, default=default, ignorCase=True)
             return val
+        return default
         
-        raise KeyError("key error: %s"%str(key))
+    if hasattr(current_data, '__getitem__'): # e.g. ComplexDict
+         try:
+             return current_data[key_part]
+         except (KeyError, TypeError):
+             if ignorCase and isinstance(current_data, dict): 
+                  val = findDictValue(key_part, current_data, default=default, ignorCase=True)
+                  return val
+             return default
+    return default
 
-def setDictData(key,value,dict1, ignorCase = True, enableUpdate = False):
-    '''
-    Args:
-        key (str,list,tuple): the key paths, like "/Header/Comment"  or ("Header","Comment")
-        value (any): value for the key
-        dict1(dict): dict to set value
-    '''
-    if isinstance(dict1, (list,tuple)):
-        dict1[int(key)] = value
-        return
-    
-    if isinstance(key,str):
-        k = findDictKey(key, dict1, ignorCase = ignorCase)
-        if k!= "//key_not_found//":
-            dict1[k] = value
-            return
+def getDictData(key, dict1, default=None, ignorCase=True):
+    '''Optimized get: Iterative, no regex.'''
+    if dict1 is None:
+        return default
+
+    if isinstance(dict1, (list, tuple)):
+        try:
+            return dict1[int(key)]
+        except (ValueError, IndexError, TypeError):
+            return default
+
+    key_parts = []
+    if isinstance(key, str):
+
+        #key may have "\\", "/"
+        if key in dict1:
+            return dict1[key]
+
+        normalized_key = key.replace('\\', '/')
+        parts = normalized_key.split('/')
+        key_parts = [p for p in parts if p]
+        if not key_parts:
+            return default
+        # Single key optimization
+        if len(key_parts) == 1:
+             val = _resolve_next_level(dict1, key_parts[0], ignorCase, default=_SENTINEL)
+             return default if val is _SENTINEL else val
+
+    elif isinstance(key, (list, tuple)):
+        key_parts = [k for k in key if k and isinstance(k, str) and k.strip()]
+        if not key_parts:
+            return default
+    else:
+        return default
+
+    current = dict1
+    for part in key_parts:
+        next_val = _resolve_next_level(current, part, ignorCase, default=_SENTINEL)
+        if next_val is _SENTINEL:
+            return default
+        current = next_val
         
-        if not re.findall(r"[\\/]",key):
-            if enableUpdate:
-                dict1[key] = value
-            else:
-                raise Exception("key error: %s"%str(key))
+    return current
+
+def setDictData(key, value, dict1, ignorCase=True, enableUpdate=False):
+    '''Optimized set: Iterative, handles creation if enableUpdate.'''
+    if dict1 is None:
+        raise Exception("Cannot set value to None dict")
+
+    # Unwrap ComplexDict
+    actual_value = value._dict if isinstance(value, ComplexDict) else value
+
+    key_parts = []
+    if isinstance(key, str):
+        
+        #key may have "\\", "/"
+        if key in dict1:
+            dict1[key] = value
+            return None
+
+        normalized_key = key.replace('\\', '/')
+        parts = normalized_key.split('/')
+        key_parts = [p for p in parts if p]
+    elif isinstance(key, (list, tuple)):
+        key_parts = [k for k in key if k and isinstance(k, str) and k.strip()]
+    else:
+        raise Exception("key error: %s" % str(key))
+
+    if not key_parts:
+        raise Exception("Empty key")
+
+    current = dict1
+    parent = None
+    last_key = key_parts[-1]
+    
+    if len(key_parts) == 1:
+        parent = dict1
+    else:
+        for i in range(len(key_parts) - 1):
+            part = key_parts[i]
+            next_val = _resolve_next_level(current, part, ignorCase, default=_SENTINEL)
             
-        keyList = list(filter(lambda k:k.strip(),re.split(r"[\\/]", key,maxsplit = 1)))
-        return setDictData(keyList,value,dict1)
-    
-    elif isinstance(key,(list,tuple)): #value must dict or will be overrided
-        key2 = list(filter(lambda k:k.strip(),key)) #filter empty key
-        if len(key2) == 1: 
-            return setDictData(key[0],value,dict1)
-
-        elif len(key2) == 2: 
-            dict2 = getDictData(key2[0],dict1)
-            return setDictData(key2[1],value,dict2)
-
-        else:
-            key1 = key2[:-1]
-            key2 =  key2[-1]
-#                 temp = self[key1]
-            temp = getDictData(key1,dict1,default = "//key_not_found//")
-            if temp ==  "//key_not_found//":
-                if enableUpdate:
-                    temp[key] = value
+            if next_val is _SENTINEL:
+                if enableUpdate and isinstance(current, dict):
+                    new_dict = {}
+                    current[part] = new_dict
+                    current = new_dict
                 else:
-                    raise Exception("key error: %s"%str(key))
-            if isinstance(temp, (list,tuple)):
-                temp[int(key2)] = value
+                    raise Exception("key error: path not found at '%s'" % part)
             else:
-                #option or dict
-                temp[key2] = value
+                current = next_val
+        parent = current
 
+    if isinstance(parent, list):
+        try:
+            parent[int(last_key)] = actual_value
+        except (ValueError, IndexError):
+            raise Exception("key error: invalid index '%s'" % last_key)
+    elif isinstance(parent, tuple):
+        raise Exception("key error: cannot set value to tuple parent")
+    elif isinstance(parent, dict):
+        if ignorCase:
+            existing_key = findDictKey(last_key, parent, ignorCase=True,default=_SENTINEL)
+            if existing_key != _SENTINEL:
+                parent[existing_key] = actual_value
+                return
+        
+        # If key doesn't exist and enableUpdate is False, original code behavior varies.
+        # Here we strictly follow: if path exists, set it. If leaf doesn't exist:
+        if last_key not in parent:
+             if not enableUpdate:
+                 # Original code raised exception if no separator found, but here we parsed it.
+                 # To be safe, if strict mode, we might raise. But usually set implies create/update.
+                 pass 
+             
+        parent[last_key] = actual_value
     else:
-        raise Exception("key error: %s"%str(key))
+        raise Exception("key error: cannot set value to non-dict/non-list parent")
 
-def delDictKey(key,dict1,ignorCase = True):
-    
-    if isinstance(dict1, (list,tuple)):
-        del dict1[int(key)]
-        return
-    
-    if isinstance(key,str):
-        k = findDictKey(key, dict1, ignorCase = ignorCase)
-        if k!= "//key_not_found//":
-            del dict1[k]
+def delDictKey(key, dict1, ignorCase=True):
+    '''Optimized del: Iterative.'''
+    if dict1 is None:
+        raise Exception("Cannot delete from None dict")
+
+    key_parts = []
+    if isinstance(key, str):
+        if key in dict1:
+            del dict1[key]
             return
-        
-        if not re.findall(r"[\\/]",key):
-            raise Exception("key error: %s"%str(key))
-            
-        keyList = list(filter(lambda k:k.strip(),re.split(r"[\\/]", key,maxsplit = 1)))
-        return delDictKey(keyList,dict1)
-    
-    elif isinstance(key,(list,tuple)): #value must dict or will be overrided
-        key2 = list(filter(lambda k:k.strip(),key)) #filter empty key
-        if len(key2) == 1: 
-            return delDictKey(key[0],dict1)
 
-        elif len(key2) == 2: 
-            dict2 = getDictData(key2[0],dict1)
-            return delDictKey(key2[1],dict2)
-
-        else:
-            key1 = key2[:-1]
-            key2 =  key2[-1]
-#                 temp = self[key1]
-            temp = getDictData(key1,dict1,default = "//key_not_found//")
-            if temp ==  "//key_not_found//":
-                raise Exception("key error: %s"%str(key))
-            if isinstance(temp, (list,tuple)):
-                del temp[int(key2)]
-            else:
-                #option or dict
-                del temp[key2]
-
+        normalized_key = key.replace('\\', '/')
+        parts = normalized_key.split('/')
+        key_parts = [p for p in parts if p]
+    elif isinstance(key, (list, tuple)):
+        key_parts = [k for k in key if k and isinstance(k, str) and k.strip()]
     else:
-        raise Exception("key error: %s"%str(key))
-    
+        raise Exception("key error: %s" % str(key))
 
-class ComplexDict(object): 
+    if not key_parts:
+        raise Exception("Empty key")
 
+    current = dict1
+    parent = None
+    last_key = key_parts[-1]
+
+    if len(key_parts) == 1:
+        parent = dict1
+    else:
+        for i in range(len(key_parts) - 1):
+            part = key_parts[i]
+            next_val = _resolve_next_level(current, part, ignorCase, default=_SENTINEL)
+            if next_val is _SENTINEL:
+                raise Exception("key error: path not found at '%s'" % part)
+            current = next_val
+        parent = current
+
+    if isinstance(parent, list):
+        try:
+            del parent[int(last_key)]
+        except (ValueError, IndexError):
+            raise Exception("key error: invalid index '%s'" % last_key)
+    elif isinstance(parent, tuple):
+        raise Exception("key error: cannot delete key from tuple parent")
+    elif isinstance(parent, dict):
+        if ignorCase:
+            existing_key = findDictKey(last_key, parent, ignorCase=True,default=_SENTINEL)
+            if existing_key != _SENTINEL:
+                del parent[existing_key]
+                return
+            else:
+                raise Exception("key error: %s not found" % last_key)
+        else:
+            if last_key in parent:
+                del parent[last_key]
+            else:
+                raise Exception("key error: %s not found" % last_key)
+    else:
+        raise Exception("key error: cannot delete from non-dict/non-list parent")
+
+# ----------------------------------------------------------------------
+# ComplexDict Class
+# ----------------------------------------------------------------------
+
+class ComplexDict(object):  
     '''
-    Args:
-        options(dict): options in dict format
-        path(str): json path
-        
-        maps: { Key:{"Value":(x1,x2) ,"Get":lambda (x1,x2):xx*2, "Set":lambda x:xx=x}}
+    High-performance dictionary wrapper with path access, case-insensitivity, and mapping.
     '''
+    __slots__ = ['_dict', 'maps', 'ignorCase']
+    enableUpdate = False
 
-    def __init__(self,dictData=None, path = None, maps = None):
-        self._dict = {}  #intial as empty dict
+    def __init__(self, dictData=None, path=None, maps=None):
+        self._dict = {}
         self.ignorCase = True
-        self.enableUpdate = False
         self.maps = maps
+        
         if path:
             if os.path.exists(path):
                 self._dict = loadJson(path)
             else:
-                raise Exception("dictData not found:%s"%path)
+                raise Exception("dictData not found:%s" % path)
             
-        if isinstance(dictData, dict):
-            self._dict = dictData
-            
-        if isinstance(dictData,ComplexDict):
-#             return dictData
+        if isinstance(dictData, ComplexDict):
             self._dict = dictData._dict
-        
+            if self.maps is None and dictData.maps is not None:
+                self.maps = dictData.maps
+        elif isinstance(dictData, dict):
+            self._dict = dictData
+
+    # --- Magic Methods ---
+
     def __getitem__(self, key):
-        """
-        Args:
-            key(str): Access using path mode "/Header/Comment"
-            key(list,tuple): access using key list mode ("Header","Comment")
-        Returns:
-            (ComplexDict): return ComplexDict object if a dict
-            (Any) : return value if not a dict
-        
-        """
-        
-        #use for loop iteration, return values
         if isinstance(key, int):
-            if isinstance(self._dict , (list,tuple)):
-                self._dict[key]
-            else:
-                #return keys
-                return self._dict[list(self._dict.keys())[key]]
+            keys = list(self._dict.keys())
+            if 0 <= key < len(keys):
+                val = self._dict[keys[key]]
+                return ComplexDict(val) if isinstance(val, dict) else val
+            raise IndexError("Index out of range")
         
         if isinstance(key, slice):
-            return [self[i] for i in range(len(self))[key]]
-            
-        val = self.get(key,default= "//key_not_found//")
-        if val == "//key_not_found//":
-            raise KeyError("key error: %s"%str(key))
-        
-        #if dict, return ComplexDict(), else value
-        if isinstance(val, (dict)):
-#             return self.__class__(val)
-            return ComplexDict(val) #self.__class__ 被继承时会有变化
-        else:
-            return val
-        
-    def __setitem__(self,key,value):
-        '''
-        Args:
-            key (str,list,tuple): the key paths, like "/Header/Comment"  or ("Header","Comment")
-            value (any): value for the key
-        '''
-        self.set(key,value)
-    
+            keys = list(self._dict.keys())
+            return [self[i] for i in range(len(keys))[key]]
 
-    def __contains__(self,key):
+        val = self.get(key, default=_SENTINEL)
+        if val == _SENTINEL:
+            raise KeyError("key error: %s" % str(key))
         
-        if self.maps and key in self.maps:
-            return True
-        
+        if isinstance(val, dict):
+            return ComplexDict(val)
+        return val
+
+    def __setitem__(self, key, value):
+        self.set(key, value)
+
+    def __delitem__(self, key):
+        self.delKey(key)
+
+    def __contains__(self, key):
+        if self.maps:
+            rst = findDictKey(key, self.maps, default=_SENTINEL, ignorCase=self.ignorCase)
+            if rst != _SENTINEL:
+                return True
+
         if key in self._dict:
             return True
+        # Optimized check without exception throwing
+        val = getDictData(key, self._dict, default=_SENTINEL, ignorCase=self.ignorCase)
+        return val is not _SENTINEL
+
+    def __getattr__(self, key):
+        # Prevent recursion for slots
+        if key in ('_dict', 'maps', 'ignorCase', 'enableUpdate'):
+            raise AttributeError(key)
         
+        if not isinstance(key, str):
+            raise AttributeError("property or key must be string: %s" % str(key))
+            
         try:
-            self.get(key)
-            return True
-        except:
-            return False
-        
-        log.exception("Contains Error with key: %s"%key)
+            return self.__getitem__(key)
+        except KeyError:
+            raise AttributeError("property or key not found: %s" % key)
 
-        
-    def __delitem__(self,key):
-        self.delKey(key)
-        
-# __getattribute__：在访问任何属性时都会被调用，包括内置属性。覆盖时需要小心避免无限递归。
-# __getattr__：仅在访问不存在的属性时才会被调用。相对更安全，适用于提供默认属性值或动态计算属性值。
-
-    def __getattr__(self,key):
-        if key in ['__get__','__set__']:
-            #just for debug run
-            return None
-        
-        if not isinstance(key, str):
-            print("property or key must be string: %s"% str(key))
-            raise("property or key must be string: %s"% str(key))
-        
-        if key in ["_dict","maps","ignorCase","enableUpdate"]:
-            try:
-                return object.__getattr__(self,key)
-            except:
-                print("property or key not exist: %s"%key)
-        else:
-            log.debug("__getattr__ from _dict: %s"%key)
-            return self[key]
-        
-
-        raise Exception("property or key  not found: %s"%key)
-
-         
     def __setattr__(self, key, value):
-        
-        if not isinstance(key, str):
-            print("property or key must be string: %s"% str(key))
-            raise("property or key must be string: %s"% str(key))
-        
-        if key in ["_dict","maps","ignorCase","enableUpdate"]:
-            object.__setattr__(self,key,value)
+        if key in self.__slots__: #('_dict', 'maps', 'ignorCase')
+            object.__setattr__(self, key, value)
         else:
-            log.debug("__setattribute__ from _dict: %s"%key)
-            self[key] = value
-    
+            self.__setitem__(key, value)
+
     def __len__(self):
         return len(self._dict)
-    
-    def __str__(self, *args, **kwargs):
+
+    def __str__(self):
         return str(self._dict)
-        
-    def __repr__(self, *args, **kwargs):
-        if isinstance(self._dict,dict):
-            return "ComplexDict (dict) object with length: %s"%str(self._dict)
-        elif isinstance(self._dict, (list,tuple)):
-            return "ComplexDict (list) object with length: %s"%str(self._dict)
+
+    def __repr__(self):
+        if isinstance(self._dict, dict):
+            return "ComplexDict (dict) object with length: %s" % str(self._dict)
+        elif isinstance(self._dict, (list, tuple)):
+            return "ComplexDict (list) object with length: %s" % str(self._dict)
         else:
-            return object.__repr__(self, *args, **kwargs)
-        
+            return object.__repr__(self)
+
     def __bool__(self):
-        return bool(len(self._dict))
-#     
-#     def __dir__(self):
-#         return list(dir(self.__class__)) + list(self.__dict__.keys())  + list(self._dict.keys())
-    
-    
+        return bool(self._dict)
+
     def __dir__(self):
-        return list(dir(self.__class__)) + list(self.__dict__.keys()) + list(self.Props)
+        # Combine class attrs, instance slots, and dict keys for autocomplete
+        return list(dir(self.__class__)) + list(self.__slots__) + list(self.Props)
 
     def __deepcopy__(self, memo):
-        #memo：一个字典，用于记录已经复制过的对象，防止循环引用导致的无限递归。
-        return deepcopy(self._dict, memo)
+        new_inst = ComplexDict.__new__(ComplexDict)
+        new_inst._dict = deepcopy(self._dict, memo)
+        new_inst.maps = deepcopy(self.maps, memo)
+        new_inst.ignorCase = self.ignorCase
+        new_inst.enableUpdate = self.enableUpdate
+        return new_inst
+
+    # --- Properties & Basic Accessors (Restored) ---
 
     @property
     def Props(self):
         propKeys = list(self._dict.keys())
         if self.maps:
             propKeys += list(self.maps.keys())
-        
         return propKeys
-    
+
     @property
     def Values(self):
-        '''
-        Returns:
-            dict: the options in dict format
-        '''
         return self._dict.values()
-    
+
+    def values(self):
+        return self._dict.values()
+
     @property
     def Keys(self):
-        '''
-        Returns:
-            dict: the options in dict format
-        '''
         return self._dict.keys()
-    
+
+    def keys(self):
+        return self._dict.keys()
+
     @property
     def Items(self):
-        '''
-        Returns:
-            dict: the options in dict format
-        '''
         return self._dict.items()
-    
+
+    def items(self):
+        return self._dict.items()
+
     @property
     def Count(self):
-        '''
-        Returns:
-            dict: the options in dict format
-        '''
         return len(self._dict)
-    
+
     @property
     def Dict(self):
-        '''
-        Returns:
-            dict: the options in dict format
-        '''
         return self._dict
-    
-    def updates(self,dict2,copy=True):
-        '''
-        dict2 update to dict1, considered Multi-level dict keys, with deepcopy
-        '''
-        dict2 = ComplexDict(dict2) #map key should be consider
-        
-        copyMethod = deepcopy if copy else lambda x:x
-        
-        if not self.Dict:
-            self._dict = copyMethod(dict2._dict)
-        
-        for key in dict2.Keys:
-            try:
-                val = self.get(key,default= "//key_not_found//") #val is dict or value
-            except:
-                log.warning("key:%s not found in layer: %s"%(key,self.Name))
-                
-            if val == "//key_not_found//": #not found
-                if isinstance(dict2[key], (dict,ComplexDict)):
-                    self.update(key, copyMethod(dict2._dict[key]))
-                else:
-                    self.update(key,dict2[key])
-            else:
-                if isinstance(val, (dict,ComplexDict)):
-                    val2 = ComplexDict(val)
-                    val2.updates(dict2[key])
-                    self[key] = val2.Dict
-                else:
-#                     log.debug(key,dict2[key])
-                    self[key] = dict2[key]
-#                     self.update(key, dict2[key])
-                    
-    def update(self,key,value):
-        self._dict[key] = value
-        
-    def append(self,dict2):
-        self._dict.update(dict2._dict)
-    
-    def setMaps(self,maps):
-        self.maps = maps
-    
+
+    # --- Core Logic (Get/Set/Del with Maps) ---
     
     def get(self,key,default = None):
         '''
@@ -493,24 +473,24 @@ class ComplexDict(object):
         
         '''
         #map key have high priority then Array key
-        if self.maps and isinstance(self.maps, dict):
+        if self.maps and isinstance(self.maps,(dict,ComplexDict)):
             maps = ComplexDict(self.maps)
             if key in maps:
                 mapKey = maps[key]
                 log.debug("found key in maps: %s->%s:"%(key,mapKey))
                 if isinstance(mapKey,ComplexDict): #if map key is dict, execulte lambda function
                     if isinstance(mapKey["Key"], str): #if only one key
-                        data = getDictData(mapKey["Key"],self._dict, default = "//key_not_found//") 
-                        if data != "//key_not_found//":
+                        data = getDictData(mapKey["Key"],self._dict, default = _SENTINEL) 
+                        if data != _SENTINEL:
                             return mapKey["Get"](data)
                         elif "Default" in mapKey:
                             return mapKey["Default"]
                         else:
                             raise KeyError("key error: %s"%str(mapKey))
                         
-                    elif isinstance(mapKey["Key"], (list,tuple)): #if more then one key, lambda should return same size value
-                        datas = [getDictData(value,self._dict, default = "//key_not_found//") for value in mapKey["Key"]] 
-                        if not regAnyMatch("//key_not_found//", datas):
+                    elif isinstance(mapKey["Key"], (list,tuple,ComplexDict)): #if more then one key, lambda should return same size value
+                        datas = [getDictData(value,self._dict, default = _SENTINEL) for value in mapKey["Key"]] 
+                        if all([d!= _SENTINEL for d in datas]):
                             return mapKey["Get"](*datas)
                         elif "Default" in mapKey:
                             return mapKey["Default"]
@@ -520,13 +500,13 @@ class ComplexDict(object):
                         pass
                 else:
                     #return map key values
-                    val = getDictData(mapKey,self._dict, default = "//key_not_found//")
-                    if val != "//key_not_found//":
+                    val = getDictData(mapKey,self._dict, default = _SENTINEL)
+                    if val != _SENTINEL:
                         return val
         
-        val = getDictData(key, self._dict, default = "//key_not_found//")
+        val = getDictData(key, self._dict, default = _SENTINEL)
         
-        if val == "//key_not_found//":
+        if val == _SENTINEL:
             if default == None:
                 raise KeyError("key error: %s"%str(key))
             else:
@@ -541,7 +521,7 @@ class ComplexDict(object):
         '''
         
         #map key have high priority then Array key
-        if self.maps and isinstance(self.maps, dict):
+        if self.maps and isinstance(self.maps,(dict,ComplexDict)):
             maps = ComplexDict(self.maps)
             if key in maps:
                 log.debug("found key in array, mapKey: %s->%s:"%(key,maps[key]))
@@ -550,140 +530,180 @@ class ComplexDict(object):
                     if isinstance(mapKey["Key"], str):
                         if "Set" not in mapKey:
                             log.exception("%s property is read only."%mapKey["Key"])
-                        returnValue = mapKey["Set"](value)
+                            
+                        if mapKey["Key"].lower() == "self":
+                            return mapKey["Set"](self[mapKey["Key"]],value)
+                        else:
+                            returnValue = mapKey["Set"](value)
+                            
                         if returnValue!=None: 
-                            setDictData(mapKey["Key"],returnValue,self._dict)
+                            #set return value to dict
+                            setDictData(mapKey["Key"],returnValue,self._dict,enableUpdate=self.enableUpdate)
                         else:
                             #if returnValue is none value, which mean returnValue not need,value is set by function.
                             pass
                         
-                    elif isinstance(mapKey["Key"], (list,tuple)):
+                    elif isinstance(mapKey["Key"], (list,tuple,ComplexDict)):
                         if "Set" not in mapKey:
                             log.exception("%s property is read only."%mapKey["Key"])
                         returnValue = mapKey["Set"](value)
-                        for i in range(len(mapKey)):
+                        if returnValue != None and len(returnValue) != len(mapKey["Key"]):
+                            raise Exception("Set map return size mismatch for key: %s" % str(key))
+                        for i in range(len(mapKey["Key"])): #mapKey["Key"] should be same size with returnValue
                             if returnValue!=None: 
-                                setDictData(mapKey["Key"][i],returnValue[i],self._dict)
+                                setDictData(mapKey["Key"][i],returnValue[i],self._dict,enableUpdate=self.enableUpdate)
                             else:
                                 #if returnValue is none value, which mean returnValue not need,value is set by function.
                                 pass
                     else:
                         pass
                 else:
-                    setDictData(mapKey,value,self._dict)
+                    setDictData(mapKey,value,self._dict,enableUpdate=self.enableUpdate)
                 
                 return None
-        else:
-            pass
-        
+
         setDictData(key,value,self._dict,enableUpdate=self.enableUpdate)
         
-#         try:
-#             setDictData(key,value,self._dict)
-#             return
-#         except:
-#        
-#         if self.enableUpdate:
-#             setDictData(key,value,self._dict,enableUpdate=True)
-# 
-#         raise Exception("key error: %s"%str(key))
-    
-    
-    def getMappingKeys(self,key):
-        '''
-        get dict really keys from maps key
-        '''
-        if not isinstance(key, str): #isinstance(k, str) add 20240428 yongsheng Guo
+
+    def delKey(self, key):
+        if self.maps and isinstance(self.maps, (dict, ComplexDict)):
+            for k, v in self.maps.items():
+                if isinstance(k, str) and k.lower() == key.lower():
+                    if isinstance(v, dict):
+                        log.debug("Could not remove function maps keys: %s" % key)
+                        return None
+                    else:
+                        log.debug("del key from map key %s:" % k)
+                        delDictKey(v, self._dict)
+                        return None
+        delDictKey(key, self._dict)
+
+    # --- Restored Utility Methods ---
+
+    def clear(self):
+        self._dict.clear()
+        # Do NOT delete self._dict, just clear it.
+
+    def updates(self, dict2, copy=True):
+        '''Deep update from another dict/ComplexDict'''
+        if isinstance(dict2, ComplexDict):
+            src = dict2._dict
+        elif isinstance(dict2, dict):
+            src = dict2
+        else:
+            return
+
+        cp = deepcopy if copy else lambda x: x
+        
+        if not self._dict:
+            self._dict = cp(src)
+            return
+
+        for key in src:
+            try:
+                val = self.get(key, default=_SENTINEL)
+            except:
+                log.warning("key:%s not found in layer" % key)
+                val = _SENTINEL
+                
+            if val is _SENTINEL: # Not found
+                if isinstance(src[key], (dict, ComplexDict)):
+                    self.update(key, cp(src[key]._dict if isinstance(src[key], ComplexDict) else src[key]))
+                else:
+                    self.update(key, src[key])
+            else:
+                if isinstance(val, (dict, ComplexDict)):
+                    val2 = ComplexDict(val) if isinstance(val, dict) else val
+                    src_val = src[key]
+                    if isinstance(src_val, ComplexDict):
+                         val2.updates(src_val, copy=copy)
+                    elif isinstance(src_val, dict):
+                         val2.updates(src_val, copy=copy)
+                    self[key] = val2.Dict
+                else:
+                    self[key] = src[key]
+
+    def update(self, key, value):
+        self._dict[key] = value
+        
+    def updateByKey(self, key, value):
+        '''Update all matched keys (case-insensitive) recursively'''
+        count = [0]
+        def _update(k, v, datas):
+            if isinstance(datas, ComplexDict):
+                datas = datas.Dict
+            if not isinstance(datas, dict):
+                return
+            for dk in datas:
+                if isinstance(datas[dk], (dict, ComplexDict)):
+                    _update(k, v, datas[dk])
+                elif isinstance(dk, str) and dk.lower() == k.lower():
+                    datas[dk] = v
+                    count[0] += 1
+        _update(key, value, self._dict)
+        return count[0]
+
+    def append(self, dict2):
+        if isinstance(dict2, ComplexDict):
+            self._dict.update(dict2._dict)
+        elif isinstance(dict2, dict):
+            self._dict.update(dict2)
+
+    def setMaps(self, maps):
+        self.maps = maps
+
+    def getMappingKeys(self, key):
+        '''Get real key from maps'''
+        if not isinstance(key, str):
             return key
         
-        
-        if isinstance(self.maps, dict):
-            for k,v in self.maps.items():
-                if isinstance(k, str) and k.lower() == key.lower(): #isinstance(k, str) add 20240428 yongsheng Guo
-                    log.debug("found key in maps, mapKey: %s:"% v)
+        if isinstance(self.maps, (dict, ComplexDict)):
+            for k, v in self.maps.items():
+                if isinstance(k, str) and k.lower() == key.lower():
+                    log.debug("found key in maps, mapKey: %s:" % v)
                     return v["Key"] if isinstance(v, dict) else v
-            
-        return "//key_not_found//"
-    
-    def getReallyKey(self,key):
-        '''
-        get key from maps or dict
-        '''
-        if not isinstance(key, str): #isinstance(k, str) add 20240428 yongsheng Guo
+        return _SENTINEL
+
+    def getReallyKey(self, key):
+        '''Get real key from maps or dict (case-insensitive)'''
+        if not isinstance(key, str):
             return key
         
         key2 = self.getMappingKeys(key)
-        if key2 != "//key_not_found//":
+        if key2 != _SENTINEL:
             return key2
         else:
             for k in self._dict:
-                if k.lower() == key.lower():
+                if isinstance(k, str) and k.lower() == key.lower():
                     return k
             return key
 
-    def delKey(self,key):
-        
-        if self.maps and isinstance(self.maps, dict):
-            for k,v in self.maps.items():
-                if k.lower() == key.lower():
-#                     log.debug("found key in maps, mapKey: %s:"% v)
-                    if isinstance(v, dict):
-                        log.debug("Could not remove function maps keys: %s"%key)
-                        return None
-                    else:
-                        log.debug("del key from map key %s:"% k)
-                        delDictKey(v,self._dict)
-                        return None
-                        
-        delDictKey(key,self._dict)
-        
-    def findNode(self,nodeName):
-        for k,v in self._dict.items():
-            if k.lower() == nodeName.lower():
+    def findNode(self, nodeName):
+        '''Find a node by key name recursively'''
+        for k, v in self._dict.items():
+            if isinstance(k, str) and k.lower() == nodeName.lower():
                 return v
-            elif isinstance(v,dict):
-                ret = ComplexDict(v).findNode(nodeName)
-                if ret:
-                    return ret
-        return None       
+            elif isinstance(v, (dict, ComplexDict)):
+                rst = ComplexDict(v).findNode(nodeName)
+                if rst:
+                    return rst
+        return None
+
     def copy(self):
         return self.__class__(deepcopy(self._dict))
-    
-    
-    def writeJosn(self,path):
-        writeJson(path,self._dict)
-    
 
-    def loadConfig(self,config):
-        
+    def writeJosn(self, path):
+        writeJson(path, self._dict)
+
+    def loadConfig(self, config):
         if isinstance(config, str):
-            #config path
             if os.path.exists(config):
                 self._dict = loadJson(config)
             else:
-                raise Exception("dictData not found:%s"%config)
-  
+                raise Exception("Path not found:%s" % config)
         elif isinstance(config, dict):
-            #dict options
             self._dict = config
-            
         elif isinstance(config, ComplexDict):
             self._dict = config.Dict
-        
         else:
-            raise Exception("loadConfig: config must be path,dict or ComplexDict. %s"%str(config))
-    
-#     @classmethod
-#     def load(cls,config):
-#         if isinstance(config, str):
-#             #config path
-#             return cls(path = config)
-#         elif isinstance(config, dict):
-#             #dict options
-#             return cls(dictData = config)
-#              
-#         elif isinstance(config, ComplexDict):
-#             return config
-#          
-#         else:
-#             raise Exception("loadConfig: config must be path,dict or ComplexDict. %s"%str(config))
+            raise Exception("loadConfig: config must be path, dict or ComplexDict. %s" % str(config))

@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20240710
 
 
@@ -39,7 +39,7 @@ class ProgressBar(object):
             finsh = "▓" * int(progress/self.step+1)
             need_do = "-" * int(100/self.step - int(progress/self.step+1))
             dur = time.time() - self.start
-            print("\r{}: {:^3.0f}%[{}->{}]  {:.2f}s  ".format(self.prompt,progress, finsh, need_do, dur), end="")          
+            print("\r{}: {:^3.0f}%[{}->{}]  {:.2f}s  ".format(self.prompt,float(progress), finsh, need_do, dur), end="")          
 #             sys.stdout.flush()
             self.temp = progress
     
@@ -136,7 +136,9 @@ def ShowProcessBar(prompt=""):
         def wrapped_function(*args, **kwargs):
             bar = ProgressBar(prompt=prompt)
             bar.showProgress()
-            return func(*args, **kwargs)
-            bar.stop()
-            return wrapped_function
+            try:
+                return func(*args, **kwargs)
+            finally:
+                bar.stop()
+        return wrapped_function
     return wrapper

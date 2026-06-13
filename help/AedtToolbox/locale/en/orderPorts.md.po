@@ -1,0 +1,39 @@
+#
+msgid ""
+msgstr ""
+
+msgid "orderPorts"
+msgstr ""
+
+msgid "Port->orderPorts"
+msgstr ""
+
+msgid "对3D Layout的Port按照Net进行排序，排序规则为："
+msgstr ""
+
+msgid "器件"
+msgstr ""
+
+msgid "总线(Net上的数字)"
+msgstr ""
+
+msgid "差分线P/N, +/-, P/M"
+msgstr ""
+
+msgid "保持3D Layout窗口在最前面，运行Port->orderPorts命令。"
+msgstr ""
+
+msgid "排序前"
+msgstr ""
+
+msgid "![Alt text](images/image-1%5B4%5D.png)"
+msgstr ""
+
+msgid "排序后："
+msgstr ""
+
+msgid "![Alt text](images/image%5B8%5D.png)"
+msgstr ""
+
+msgid "输出S参数"
+msgstr ""

@@ -18,7 +18,7 @@
 - <SubMenu> </SubMenu> 时对菜单项的声明，允许进行嵌套，嵌套将以子菜单的形式呈现。子菜单的深度未作限定，但是不建议嵌套的过深，影响用户体验。
 - Type：取值可以为 "MenuItem"（菜单项）,"Separator"(分隔符), 省略时默认为"MenuItem"
 - Name：菜单显示的名称
-- ExecuteType：可执行程序的类型，可选值：Python，IronPython，EXE。 Command类型为内部保留类型，用户无法进行定义。
+- ExecuteType：可执行程序的类型，可选值：Python，IronPython，EXE。 其中Command类型为内部保留类型，用户无法进行定义。
 - Path: 可执行程序，脚本的路径。可以使用绝对路径值。如果使用相对路径，可以使用"$+目录"的形式引入当面目录下的文件夹。
 - Arguments: 允许传递参数给可执行脚本，多个参数以空格隔开。
 - PythonPath： 可以指定Python的执行路径，特别是存在多个版本时可以按照路径区分版本。省略时会从Path变量中查找Python执行文件。

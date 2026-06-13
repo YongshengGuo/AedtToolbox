@@ -1,5 +1,5 @@
 #--- coding:utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 2023-04-24
 
 '''
@@ -15,27 +15,60 @@ Examples:
 import os
 import re
 from ..common.complexDict import ComplexDict
-from ..common.common import log
+from ..common.common import log,findFilesByPattern
 
-class Solution(object):
-    
-    layoutTemp = None
+
+class DCSolution(object):
     
     def __init__(self,name = None,variation = None,layout=None):
         
         self.name = name
-        if layout:
-            self.__class__.layoutTemp = layout
-            self.layout = layout
-        else:
-            self.layout = self.__class__.layoutTemp
-        
-#     @property
-#     def oModule(self):
-#         if not self._oModule:
-#             self._oModule = self.oDesign.GetModule("SolveSetups")
-#         return self._oModule
+        self.layout = layout
+
+    @property
+    def Name(self):
+        return self.name
     
+    def exportHtmlReport(self,path = None):
+        
+        if not path:
+            path = self.layout.projectDir + "\%s_%s_%s_DCReport.htm"%(self.layout.ProjectName,self.layout.DesignName,self.name)
+
+        #在self.ResultsPath多级子目录下查找是否存在 ".*%s.dcb"%self.name的文件，
+        dcbFiles = findFilesByPattern(os.path.join(self.layout.ResultsPath,self.layout.DesignName), ".*%s.dcb"%self.layout.ProjectName)
+        #如果找到多个则以日期最新的为主
+        if not dcbFiles:
+            log.error("not found solution for %s, please analyze the setup first."%self.name)
+            return
+        elif len(dcbFiles) > 1:
+            dcbFiles.sort(key=lambda x:os.path.getmtime(x))
+            dcbFile = dcbFiles[-1]
+        else:
+            dcbFile = dcbFiles[0]
+        log.info("export html report: %s"%path)
+        self.layout.oDesign.DCReportGeneration(
+            [
+                "NAME:Report",
+                "ReportFile:="		, path,
+                "Color:="		, 0,
+                "State:="		, True,
+                "Filter:="		, "",
+                "FailCheck:="		, True,
+                "FailRadio:="		, True,
+                "Limit:="		, True,
+                "Threshold:="		, 1000000,
+                "DCFile:="		, dcbFile,
+                "SimName:="		, self.name
+            ])
+        
+
+class SYZSolution(object):
+    
+    def __init__(self,name = None,variation = None,layout=None):
+        
+        self.name = name
+        self.layout = layout
+
     @property
     def Name(self):
         return self.name
@@ -56,47 +89,25 @@ class Solution(object):
             path += ext
         else:
             pass
+
         try:
-            self.layout.oDesign.ExportNetworkData("", [solutionName], 3, path, ["ALL"], True, 50, "S", -1, 0, 15)
+            log.info("export snp: %s"%path)
+            oModule = self.layout.oDesign.GetModule("SolveSetups")
+            variation_array=oModule.ListVariations(solutionName)
+            if not variation_array:
+                variation_array = [""]
+            self.layout.oDesign.ExportNetworkData(variation_array[0], [solutionName], 3, path, ["ALL"], True, 50, "S", -1, 0, 15)
         except:
             log.error("Export snp fail, Solution data may be not available.")
 #         variation_array=self.oModule.ListVariations(solutionName)
 #         self.oDesign.ExportNetworkData(variation_array[0], [solutionName], 3, path, ["ALL"], True, 50, "S", -1, 0, 15)
-        
     
-    
-    
-#     @classmethod
-#     def getSolution(cls,setupName,sweepName):
-#         return cls(setupName = setupName,sweepName = sweepName)
-#     
-#     @classmethod
-#     def getAllSetupSolution(cls):
-#         solutions = []
-#         oModule = cls.layout.oDesign.GetModule("SolveSetups")
-#         setups = oModule.GetSetups()
-#         for setup in setups:
-#             for sweep in oModule.GetSweeps(setup):
-#                 solutions.append(cls.getSolution(setup, sweep))
-#         
-#         return solutions
-#        
-#     @classmethod
-#     def getAllSolution(cls):
-#         '''
-#         Solutions include optimetrics, all exist in design
-#         '''
-#         pass
-
 
 class Solutions(object):
     
     def __init__(self,layout=None):
         self.solutionDict = None #ComplexDict component buffer
-        
         self.layout = layout
-        if layout:
-            Solution.layoutTemp = layout
             
     def __getitem__(self, key):
         """
@@ -116,7 +127,7 @@ class Solutions(object):
                 #find by 正则表达式
                 lst = [name for name in self.SolutionDict.Keys if re.match(r"^%s$"%key,name,re.I)]
                 if not lst:
-                    raise Exception("not found component: %s"%key)
+                    raise Exception("not found Solution: %s"%key)
                 else:
                     #如果找到多个器件（正则表达式），返回列表
                     return self[lst]
@@ -146,13 +157,29 @@ class Solutions(object):
         if self.solutionDict is None:
             solutionDict = {}
             maps = {}
-            oModule = self.layout.oDesign.GetModule("SolveSetups")
-            setups = oModule.GetSetups()
+            setups = self.layout.Setups
             for setup in setups:
-                for sweep in oModule.GetSweeps(setup):
-                    name = "%s:%s"%(setup,sweep)
-                    solutionDict.update({name:Solution(name,layout=self.layout)})
-                    maps.update({"%s_%s"%(setup,sweep):"%s:%s"%(setup,sweep)})
+                name = setup.name
+                setupType = setup["SolveSetupType"]
+                if setupType == "SIwaveDCIR":
+                    solutionDict.update({name:DCSolution(name,layout=self.layout)})
+                elif setupType == "HFSS" or setupType == "SIwave":
+                    for sweep in setup.Sweeps:
+                        name = "%s:%s"%(setup.name,sweep.name)
+                        solutionDict.update({name:SYZSolution(name,layout=self.layout)})
+                        maps.update({"%s_%s"%(setup.name,sweep.name):"%s:%s"%(setup.name,sweep.name)})
+                else:
+                    log.warning("setup type: %s is not supported."%setupType)
+
+            # oModule = self.layout.oDesign.GetModule("SolveSetups")
+            # setups = oModule.GetSetups()
+            # for setup in setups:
+                
+
+            #     for sweep in oModule.GetSweeps(setup):
+            #         name = "%s:%s"%(setup,sweep)
+            #         solutionDict.update({name:Solution(name,layout=self.layout)})
+            #         maps.update({"%s_%s"%(setup,sweep):"%s:%s"%(setup,sweep)})
 
             self.solutionDict  = ComplexDict(solutionDict,maps=maps)
         return self.solutionDict 

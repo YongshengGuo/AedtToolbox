@@ -1,5 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Menu>
+	<SubMenu Name="Import">
+		<SubMenu Type="MenuItem" Name="LoadLayout" ExecuteType="Python" Path="$UserLib/3DLayout/Import/loadLayout.py"/>
+	</SubMenu>
+
 	<SubMenu Name="Export" DesignType="3DLayout">
 		<SubMenu Type="MenuItem" Name="ExportToHfssWithNets" ExecuteType="Python" Path="$UserLib/3DLayout/export/export3DModelWithNets.py" Arguments ="" PythonPath="" EntryFunc="export2HFSS"/>
 		<SubMenu Type="MenuItem" Name="ExportToQ3DWithNets" ExecuteType="Python" Path="$UserLib/3DLayout/export/export3DModelWithNets.py" Arguments ="" PythonPath="" EntryFunc="export2Q3D"/>

@@ -5,7 +5,6 @@
 
 
 import sys,os
-sys.path.append(r"C:\work\Study\Script\repository\win32API\AedtToolbox\magicBall\magicBall\bin\Release\SysLib")
 
 Module = sys.modules['__main__']
 if hasattr(Module, "oDesktop"):

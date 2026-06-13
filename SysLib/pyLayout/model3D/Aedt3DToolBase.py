@@ -1,5 +1,5 @@
 #--- coding:utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 2023-04-09
 
 
@@ -29,16 +29,13 @@ from .object3DModel import Objects3DModle
 from ..common.common import log,isIronpython #log is a globle variable
 from ..common.unit import Unit
 from ..common.common import DisableAutoSave,ProcessTime
+from ..pyLayout import Layout
 
 class Aedt3DToolBase(object):
     '''
     classdocs
     '''
-    maps = {
-        "InstallPath":"InstallDir",
-        "Path":"ProjectPath",
-        "Ver":"Version",
-        }
+
     
     def __init__(self,toolType=None, version=None, installDir=None,nonGraphical=False,newDesktop=False):
         '''
@@ -54,6 +51,11 @@ class Aedt3DToolBase(object):
             open AEDT 2013R1, return PyLayout
         
         '''
+        self.maps = {
+            "InstallPath":"InstallDir",
+            "Path":"ProjectPath",
+            "Ver":"Version",
+            }
         self._info = ComplexDict({
             "Version":None,
             "InstallDir":None,
@@ -100,8 +102,6 @@ class Aedt3DToolBase(object):
         if not isinstance(key, str):
             log.exception("key for layout must be str: %s"%key)
         
-        
-        
         if key in self._info:
             return self._info[key]
         
@@ -109,7 +109,7 @@ class Aedt3DToolBase(object):
             log.exception("layout should be intial use '%s.initDesign(projectName = None,designName = None)'"%self._toolType)
             return
         
-        log.debug("try to get element type: %s"%key)
+        # log.debug("try to get element type: %s"%key)
         
         if key in self._info["Objects"]:
             return self._info["Objects"][key]
@@ -131,11 +131,11 @@ class Aedt3DToolBase(object):
         try:
             return super(self.__class__,self).__getattribute__(key)
         except:
-            log.debug("Layout __getattribute__ from info: %s"%str(key))
+            # log.info("Layout __getattribute__ from info: %s"%str(key))
             return self[key]
         
     def __setattr__(self, key, value):
-        if key in ["_oDesktop","_oProject","_oDesign","_oEditor","_info","_toolType"]:
+        if key in ["_oDesktop","_oProject","_oDesign","_oEditor","_info","_toolType","maps"]:
             object.__setattr__(self,key,value)
         else:
             self[key] = value
@@ -161,7 +161,7 @@ class Aedt3DToolBase(object):
         
     def __initByPyaedt(self):    
         try:
-            from pyaedt import launch_desktop
+            from ansys.aedt.core import launch_desktop
             log.info("try to initial oDesktop using PyLayout Lib... ")
             self.PyAedtApp = launch_desktop(version = self.version,non_graphical=self.NonGraphical,new_desktop = self.newDesktop,close_on_exit=False)
             self.UsePyAedt = True
@@ -250,8 +250,12 @@ class Aedt3DToolBase(object):
                 self._oProject = oDesktop.SetActiveProject(projectName)
      
             else:
-                self._oProject = oDesktop.GetActiveProject()
-                 
+                #update for 2025.1
+                try:
+                    self._oProject = oDesktop.GetActiveProject()
+                except:
+                    log.info("GetActiveProject error.")
+                
                 if not self._oProject:
                     self._oProject = oDesktop.GetProjects()[0]
                     oDesktop.SetActiveProject(self._oProject.GetName())
@@ -354,9 +358,16 @@ class Aedt3DToolBase(object):
                 self._info.update("oEditor",self._oDesign.SetActiveEditor("3D Modeler"))
                 self._info.update("DesignName", self.getDesignName(self._oDesign))
 
+#             if designtype == 'HFSS 3D Layout Design':
+#                 self = Layout(self.version, self.installDir,self.nonGraphical,self.newDesktop,self.usePyAedt,self.oDesktop)
+#                 self.initDesign()
+#             else:
+#                 self.initObjects()
             #initObjects
             if initObjects and designtype != 'HFSS 3D Layout Design':
                 self.initObjects()
+            
+        
 
 
     def initObjects(self):
@@ -519,7 +530,25 @@ class Aedt3DToolBase(object):
     def getUnit(self):
         return self.oEditor.GetModelUnits()
     #---functions
-
+    
+    #---UDP,UDM,UDO,3DComponent
+    def createUDM(self,dllName, udmParams, szLib = 'syslib'):
+    
+        vArg1 = ["NAME:UserDefinedModelParameters", 
+                 ["NAME:Definition"],["NAME:Options"],
+                 "DllName:=", dllName, "Library:=", szLib]
+        vArgParamVector = ["NAME:GeometryParams"]
+    
+        for pair in udmParams:
+            vArgParamVector.append(["NAME:UDMParam", 
+                                    "Name:=", pair["Name"], 
+                                    "Value:=", pair["Value"],
+                                    "PropType2:=", pair["PropType2"],
+                                    "PropFlag2:=", pair["PropFlag2"]
+                                    ])
+         
+        vArg1.append(vArgParamVector)
+        self.oEditor.CreateUserDefinedModel(vArg1)
 
     #--- IO
     

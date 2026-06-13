@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230611
 
 """
@@ -52,7 +52,7 @@ class Via(Primitive):
             return
         
         super(self.__class__,self).parse(force) #initial component properties
-        maps = self.maps.copy()
+        maps = self.maps
         
         #add X,Y location property
         maps.update({"X":{
@@ -88,12 +88,36 @@ class Via(Primitive):
     def backdrill(self,stub = None):
         '''
         this function only support 2023.1 or later versions 
+        stub: str or dict {layerName:"stubTop,stubTop",
+        defalut:stubTop,stubBottom,"Tail":top,bottom} 
         '''
         
+        if isinstance(stub,str):
+            stubs = re.split("[,;]",stub)
+            if len(stubs)==1:
+                stub = {"default":[stubs[0],stubs[0]]}
+            elif len(stubs)==2:
+                stub = {"default":stubs}
+            else:
+                log.exception("stub format error %s " % str(stub))
         
-        if stub == None:
-            stub = self.layout.options["H3DL_backdrillStub"]
-        
+        if isinstance(stub,(dict,ComplexDict)):
+            for layer,stubs in stub.items():
+                if isinstance(stubs,str):
+                    stubs = re.split("[,;]",stubs)
+                
+                if not isinstance(stubs,(list,tuple)):
+                    log.exception("stub format error %s " % str(stub))
+                
+                if len(stubs)==1:
+                    stub[layer] = [stubs[0],stubs[0]]
+                elif len(stubs)==2:
+                    stub[layer] = stubs
+                else:
+                    log.error("stub format error %s " % str(stub))
+            if "default" not in stub:
+                stub["default"] = [self.layout.options["H3DL_backdrillStub"],self.layout.options["H3DL_backdrillStub"]] #last layer
+        stub = ComplexDict(stub)
         layers = []
         #for lines
         names = self.getConnectedObjs('line')
@@ -102,11 +126,13 @@ class Via(Primitive):
             layers.append(line["PlacementLayer"])
         
 
-        #for smt pad
+        #for pins
         names = self.getConnectedObjs('pin')
         for name in names:
             pin = self.layout.pins[name]
-            if pin.isSMTPad: layers.append(pin["Start Layer"])
+            CompName = pin.CompName
+            if CompName in self.layout.components:
+                layers.append(self.layout.components[CompName]["PlacementLayer"])
         
         if len(layers)<2: #small then two layers
             return
@@ -114,15 +140,28 @@ class Via(Primitive):
         layers.sort(key = lambda x: Unit(self.layout.layers[x].Lower).V,reverse = True)
         #---backdrill Top
         if layers[0] != self.layout.layers["C1"].Name:
-            log.info("Backdrill vias : %s from Top to %s, stub:%s, net:%s"%(self.name,layers[0],stub,self.Net))
+            stubLen = stub[layers[0]][0] if layers[0] in stub else stub["default"][0]
+            #Tail only for pins
+            # if "Tail" in stub and stub["Tail"]:
+            #     disBot = Unit(self.layout.layers[layers[0]].Lower)-Unit(self.layout.layers["CB1"].lower)
+            #     if Unit(stub["Tail"][-1])>disBot:
+            #         stubLen = (Unit(stub["Tail"][-1]) - disBot)["mil"]
+            
+            log.info("Backdrill vias : %s from Top to %s, stub:%s, net:%s, stub: %s"%(self.name,layers[0],stub,self.Net,stubLen))
             self.BackdrillTop = layers[0]
-            self.TopOffset = stub
+            self.TopOffset = stubLen
             self.update()
         #---backdrill bottom
         if layers[-1] != self.layout.layers["CB1"].Name:
-            log.info("Backdrill vias : %s from Bottom to %s, stub:%s, net:%s"%(self.name,layers[-1],stub,self.Net))
+            stubLen = stub[layers[0]][-1] if layers[0] in stub else stub["default"][-1]
+            #Tail only for pins
+            # if "Tail" in stub and stub["Tail"]:
+            #     disTop = Unit(self.layout.layers["C1"].lower) - Unit(self.layout.layers[layers[-1]].Lower)
+            #     if Unit(stub["Tail"][0])>disTop:
+            #         stubLen = (Unit(stub["Tail"][0]) - disTop)["mil"]         
+            log.info("Backdrill pin : %s from Bottom to %s, stub:%s, net:%s, stub: %s"%(self.name,layers[-1],stub,self.Net,stubLen))
             self.BackdrillBottom = layers[-1]
-            self.BottomOffset = stub
+            self.BottomOffset = stubLen
             self.update()
             
     def clearBackdrill(self):

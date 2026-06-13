@@ -1,12 +1,12 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20240317
 
 import re
 
 try:
     from collections import Iterable
-except:
+except Exception:
     from collections.abc import Iterable
 
 from ..common import hfss3DLParameters
@@ -34,9 +34,6 @@ class Primitive(object):
         object (_type_): _description_
     '''
 
-    layoutTemp = None
-    
-    
     def __init__(self, name, layout=None):
         '''Initialize Pin object
         Args:
@@ -44,12 +41,7 @@ class Primitive(object):
             layout (PyLayout): PyLayout object, optional
         '''
         self.name = name
-        if layout:
-            self.__class__.layoutTemp = layout
-            self.layout = layout
-        else:
-            self.layout = self.__class__.layoutTemp
-
+        self.layout = layout
         self._info = None
         self.maps = {}
         self.parsed = False
@@ -69,7 +61,7 @@ class Primitive(object):
     def __getattr__(self,key):
 
         if key in ["layout","name","_info","maps","parsed"]:
-            return object.__getattr__(self,key)
+            return object.__getattribute__(self,key)
         else:
             log.debug("__getattr__ from _dict: %s"%key)
             return self[key]
@@ -116,7 +108,12 @@ class Primitive(object):
     
     @property
     def Collection(self):
-        return self.layout[self.getProp("Type")+"s"]
+        typ = self.getProp("Type")
+        
+        if self.__class__.__name__ == 'Port':
+            typ = "Port"
+    
+        return self.layout[typ+"s"]
     
     def parse(self,force = False):
         '''
@@ -128,7 +125,7 @@ class Primitive(object):
         
         log.debug("parse primitive: %s"%self.name)
         self._info = ComplexDict()
-        maps = self.maps.copy()
+        maps = self.maps
 #         self._info.update("Name",self.name) #add name to Info
         
         #--- for BaseElementTab peoperty
@@ -153,8 +150,8 @@ class Primitive(object):
             }})
         
         #for Polygon Object
-        def __area(self2):
-            polygon = self2.layout.oEditor.GetPolygon(self2.name)
+        def __area(self):
+            polygon = self.layout.oEditor.GetPolygon(self.name)
             return polygon.Area() if polygon else None
         
         maps.update({"Area":{
@@ -162,14 +159,29 @@ class Primitive(object):
             "Get":lambda s: __area(s)
             }})
         
+        #for bbox
+        def __GetBBox(self):
+            bbox = self.layout.oEditor.GetBBox(self.name)
+            if bbox:
+                LL = bbox.BBoxLL()
+                UR = bbox.BBoxUR()
+                return [Point(LL),Point(UR)] 
+            else:
+                return None
+
+        maps.update({"BBox":{
+            "Key":"self",
+            "Get":lambda s: __GetBBox(s)
+            }})
+
         self.maps = maps
         self._info.setMaps(maps)
         self.parsed = True
 
 
-    def __area(self,name):
-        polygon = self.layout.oEditor.GetPolygon(self.name)
-        return polygon.Area() if polygon else None
+#     def __area(self,name):
+#         polygon = self.layout.oEditor.GetPolygon(self.name)
+#         return polygon.Area() if polygon else None
 
     def get(self,key):
         '''
@@ -180,7 +192,7 @@ class Primitive(object):
             self.parse()
   
         
-        if key in self._info and self._info[key] != None: # Map value or already have value
+        if key in self._info and self._info[key] is not None: # Map value or already have value
             return self._info[key]
         
         if not isinstance(key, str): #key must string
@@ -309,22 +321,30 @@ class Primitive(object):
         objs3 = set(objs1).intersection(set(objs2))
         return list(objs3)
 
+    def getPhysicallyConnected(self):
+        self.layout.oEditor.UnselectAll()
+        try:
+            self.layout.oEditor.SelectPhysicallyConnected(
+                [
+                    "NAME:elements", 
+                    self.name
+                ])
+            objs2 = self.layout.oEditor.GetSelections()
+        except Exception:
+            return []
+        self.layout.oEditor.UnselectAll()
+        return list(objs2)
 
     def delete(self):
         
-        type = self.Type
-        
-        #for port objects, PlanarEM Type
-        if type in ["Circuit","Single Strip Gap Source"]: 
-            type = "Port"
-        
-        self.layout[type+"s"].pop(self.Name)
+        self.Collection.pop(self.Name)
         self.layout.oEditor.Delete([self.Name])
         
 
     def update(self):
-        self._info = None #delay update
-#         self.parse()
+        self._info = None 
+        self.parsed = False #delay update
+
 
 
 class Primitives(object):
@@ -354,7 +374,9 @@ class Primitives(object):
         
         if isinstance(key, str):
             if key in self.ObjectDict:
+#                 return self.primitiveClass(key,layout=self.layout)
                 return self.ObjectDict[key]
+            
             elif re.match(r".*[\*\.\?\+\{\}\|].*",key,re.I): #正则表达式
                 #find by 正则表达式
                 lst = [name for name in self.ObjectDict.Keys if re.match(r"^%s$"%key,name,re.I)]
@@ -375,7 +397,7 @@ class Primitives(object):
             #just for debug run
             return None
         if key in ["layout","_objectDict","type","primitiveClass"]:
-            return object.__getattr__(self,key)
+            return object.__getattribute__(self,key)
         else:
             log.debug("__getattr__ from _dict: %s"%key)
             return self[key]
@@ -430,7 +452,7 @@ class Primitives(object):
             else:
                 self._objectDict  = ComplexDict()
                 
-        return self._objectDict 
+        return self._objectDict
     
     @property
     def All(self):
@@ -452,12 +474,18 @@ class Primitives(object):
         return dict(filter(func,self.ObjectDict.items()))
     
 
+    def filterName(self, func):
+        if isinstance(func, str):
+            return list(filter(lambda x:re.match(func+"$", x, re.I),self.NameList))
+        else:
+            return list(filter(func,self.NameList))
+
     def filterByLayer(self,layerName):
         '''
         type: [] or Poly Object
         '''
         objsLayerAll = self.layout.oEditor.FindObjects('Layer',self.layout.layers.getRealLayername(layerName))
-        return self.filter(lambda k,v:k in objsLayerAll)
+        return self.filter(lambda kv: kv[0] in objsLayerAll)
         
         
 #         objsLayer = []
@@ -467,18 +495,28 @@ class Primitives(object):
     
         
     def refresh(self):
+        if self._objectDict:
+            self._objectDict.clear()
+#             del self._objectDict
+            
         self._objectDict  = None
 
         
     def push(self,name,obj=None):
+        if self._objectDict is None:
+            self._objectDict = ComplexDict()
         if obj:
             self._objectDict.update(name,obj)
         else:
             self._objectDict.update(name,self.primitiveClass(name,layout=self.layout))
     
     def pop(self,name):
+        if self._objectDict is None:
+            return
         del self._objectDict[name]
         
+    def get(self, key):
+        return self.getByName(key)
 
     def getByName(self,name):
         '''
@@ -498,7 +536,7 @@ class Primitives(object):
     
     def getUniqueName(self,prefix=""):
         
-        if prefix == None:
+        if prefix is None:
             prefix = "%s_"%self.type
             
         for i in range(1,100000):
@@ -509,33 +547,11 @@ class Primitives(object):
             else:
                 break
         return name
-    
-#     #add Circle
-#     def addCircle(self,center,r,layerName):
-#         '''
-#         center:[x,y],"x,y", Point
-#         r: 
-#         '''
-#         cpt = Point(center)
-#         name = self.layout.oEditor.CreateCircle(
-#             [
-#                 "NAME:Contents",
-#                 "circleGeometry:="    , 
-#                     ["Name:=", "circle_0",
-#                     "LayerName:=", self.layout.Layers[layerName].Name,
-#                     "lw:=", "0",
-#                     "x:=", cpt.X,
-#                     "y:=", cpt.Y,
-#                     "r:=", str(r)]
-#             ])
-#         
-#         self.push(name)
-#         return self[name]
 
 class Objects3DL(Primitives):
 
     def __init__(self,layout=None,types=".*"):
-        super(self.__class__,self).__init__(layout, type=types,primitiveClass=None)
+        super(Objects3DL,self).__init__(layout, type=types,primitiveClass=None)
 
     @property
     def ObjectDict(self):
@@ -559,21 +575,26 @@ class Objects3DL(Primitives):
         objTypes = []
         for t in types:
             for t2 in self.layout.primitiveTypes:
-                if re.match(r"^%s?$"%t,t2,re.I):
+                if re.match(r"^%s$"%t,t2,re.I):
                     objTypes.append(t2)
 
         if len(objTypes)<1:
-            return []
+            self._objectDict = ComplexDict()
+            return self._objectDict
         
         objectPrimitives = None
         for typ in objTypes:
             try:
-                if objectPrimitives == None:
+                if objectPrimitives is None:
                     objectPrimitives = self.layout[typ+"s"]
                 else:
                     objectPrimitives += self.layout[typ+"s"]
-            except:
+            except Exception:
                 log.exception("%s not in layout deifiniton"%typ)
-                
+
+        if objectPrimitives is None:
+            self._objectDict = ComplexDict()
+            return self._objectDict
+
         self._objectDict = objectPrimitives._objectDict
         return self._objectDict

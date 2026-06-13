@@ -12,7 +12,7 @@ if __name__ == '__main__':
     
     print("sys.argv: %s"%sys.argv)
     entryFunc = "main"
-    pyPath = r"C:\work\Study\Script\Ansys\quickAnalyze\Yguo\BrtFrt.py"
+    pyPath = r"C:\work\Study\Script\Ansys\quickAnalyze\FastSim\toolkits\ImportCSVStackup\importCSVStackup.py"
 
     appDir = os.path.dirname(pyPath)
     sys.path.insert(0,appDir)

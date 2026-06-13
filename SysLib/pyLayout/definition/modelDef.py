@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230828
 
 
@@ -25,7 +25,6 @@ class ModelDef(Definition):
     
     def __init__(self, name = None,array = None,layout = None):
         super(self.__class__,self).__init__(name,type="Model",layout=layout)
-    
 
 
 class ModelDefs(Definitions):
@@ -36,16 +35,29 @@ class ModelDefs(Definitions):
 
         
 
-    def addSnpModel(self,path,name=None):
-#         try:
-#             portCount = float(re.sub(r"[A-Za-z]","",path.split(".")[-1]))
-#         except:
-#             log.exception(r"not a vaild snp file: %s"%path)
-            
-#         if not name:
-#             name = os.path.split(path)[-1] 
-#             name = re.sub("[\.\s#]","_",name)
+    def addSnpModel(self,path,name=None,pinMap=None):
         
+        if not name:
+            name = os.path.split(path)[-1] 
+            name = re.sub("[\.\s#]","_",name)
+        
+        if name in self.NameList:
+            log.info("%s exist in model definition,skip"%name)
+            return
+        
+        try:
+            portCount = int(re.sub(r"[A-Za-z]","",path.split(".")[-1]))
+        except:
+            log.exception(r"not a vaild snp file: %s"%path)
+            
+
+        
+        nodes,pinNames = [],[]
+        if pinMap:
+            nodes,pinNames = pinMap
+        if not nodes:
+            nodes = ["Port%s"%(i+1) for i in range(portCount)] #["Port1","Port2"]
+
         oDefinitionManager = self.layout.oProject.GetDefinitionManager()
         oModelManager = oDefinitionManager.GetManager("Model")
         
@@ -54,41 +66,32 @@ class ModelDefs(Definitions):
         ary.Name = name
         ary.ModelType = "nport"
         ary.filename = path
-        ary.numberofports = 2
-        ary.PortNames = ["Port1","Port2"]
+        ary.numberofports = portCount
+        ary.PortNames = nodes #["Port1","Port2"]
  
-        if name in self.NameList:
-#             oModelManager.Edit(name,ary.Array)
-            oModelManager.EditWithComps(name,ary.Array)
-#             self[name].update()
-#             return self[name]
-        else:
-            oModelManager.Add(ary.Array)
-            self.push(name)
-        
+
+        oModelManager.Add(ary.Array)
+        self.push(name)
         self[name].parse()    
         return self[name]
         
     def addSpiceModel(self,path,name=None):
         
-#         if not name:
-#             name = os.path.split(path)[-1] 
-#             name = re.sub("[\.\s#]","_",name)
+        if not name:
+            name = os.path.split(path)[-1] 
+            name = re.sub("[\.\s#]","_",name)
+        
+        if name in self.NameList:
+            log.info("%s exist in model definition,skip"%name)
+            return
         
         oDefinitionManager = self.layout.oProject.GetDefinitionManager()
         oModelManager = oDefinitionManager.GetManager("Model")
-        
-        if name in self.NameList:
-            oModelManager.EditWithComps(name,["NAME:%s"%name,"Name:=", name,"ModelType:=", "dcirspice",
-                               "filename:=", path,"modelname:=", name]) 
+
+
+        oModelManager.Add(["NAME:%s"%name,"Name:=", name,"ModelType:=", "dcirspice",
+                           "filename:=", path,"modelname:=", name]) 
             
-#             self[name].update()
-#             return self[name]
-        else:
-            oModelManager.Add(["NAME:%s"%name,"Name:=", name,"ModelType:=", "dcirspice",
-                               "filename:=", path,"modelname:=", name]) 
-            
-            self.push(name)
-        
+        self.push(name)
         self[name].parse()
         return self[name]

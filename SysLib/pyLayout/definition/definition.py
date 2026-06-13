@@ -1,13 +1,13 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230410
 
 import re
 
 try:
     from collections import Iterable
-except:
-    from collections.abc import Iterable
+except Exception:
+    from collections.abc import Iterable  # @UnresolvedImport
 
 from ..common import hfss3DLParameters
 from ..common.arrayStruct import ArrayStruct
@@ -32,26 +32,20 @@ class Definition(object):
     'mass_density:=', '0', 
     'specific_heat:=', '0']
     '''
-    
-    layoutTemp = None
-    maps = {}
-    
+
     def __init__(self, name,type,layout=None):
         '''Initialize Pin object
         Args:
             name (str): Via name in layout
             layout (PyLayout): PyLayout object, optional
         '''
-        if layout:
-            self.__class__.layoutTemp = layout
-            self.layout = layout
-        else:
-            self.layout = self.__class__.layoutTemp
-            
+
+        self.layout = layout
         self.name = name
         self.type = type
         
         self._info = ComplexDict()
+        self.maps = {}
         self.parsed = False
 
     def __getitem__(self, key):
@@ -85,22 +79,31 @@ class Definition(object):
         keyList = list(filter(lambda k:k.strip(),keyList)) #filter empty key
         if len(keyList)>1:
             self[keyList[0]][keyList[1]] = value
+            self.update()
+            return
 
-        if key in self._info.Array:
+        elif key in self._info.Array:
             self._info.Array[key] = value
             self.update()
+            return
             
         elif key in self._info:
             self._info[key] = value
-
+            if key in self.maps:
+                self.update()
+            return
         else:
-            log.exception("key error for %S: %s"%(self.type,key))       
-        
+            log.info("Try to update all subkey %S: %s"%(self.type,key))
+#             log.exception("key error for %S: %s"%(self.type,key))
+            count = self.updateByKey(key, value)
+            if not count:
+                log.exception("key error for %S: %s"%(self.type,key))
+            return
 
     def __getattr__(self,key):
 
         if key in ["layout","name","_info","parsed","type","maps"]:
-            return object.__getattr__(self,key)
+            return object.__getattribute__(self,key)
         else:
             log.debug("__getattr__ from _dict: %s"%key)
             return self[key]
@@ -143,7 +146,7 @@ class Definition(object):
         try:
             propKeys +=  self.Info.Array.Keys
             propKeys +=  self.Info.Array.maps.keys()
-        except:
+        except Exception:
             pass
              
         return propKeys
@@ -165,8 +168,10 @@ class Definition(object):
     def Array(self):
         self.parse()
         return self._info.Array
-        
-
+    @Array.setter
+    def Array(self,value):
+        self.parse()
+        self._info.Array = value
         
     def parse(self,force = False):
         '''
@@ -177,7 +182,7 @@ class Definition(object):
             return
         
         log.debug("parse definition: %s"%self.name)
-        maps = self.maps.copy()
+        maps = self.maps
         datas = self.oManager.GetData(self.name)
         if datas:
             _array = ArrayStruct(tuple2list(datas),maps)
@@ -194,8 +199,17 @@ class Definition(object):
     
     def update(self):
         self.oManager.Edit(self.Name,self.Array.Datas)
-        self.parse()
+        self.parse(force=True)
 
+    def updateByKey(self,key,value):
+        '''
+        update all matched key to value
+        '''
+        count = self.Array.updateByKey(key,value)
+        if count:
+            log.info("update key:%s value: %s, for %s times"%(key,value,count))
+            self.update()
+        return count
 
     
 class Definitions(object):
@@ -260,7 +274,7 @@ class Definitions(object):
     
     @property
     def DefinitionDict(self):
-        if self._definitionDict == None:
+        if self._definitionDict is None:
             oDefinitionManager = self.layout.oProject.GetDefinitionManager()
             oManager = oDefinitionManager.GetManager(self.type)
             self._definitionDict  = ComplexDict(dict([(name,self.definitionCalss(name,layout=self.layout)) for name in oManager.GetNames()]))
@@ -283,13 +297,18 @@ class Definitions(object):
         return list(self.DefinitionDict.Keys)
     
     def filter(self, func):
-        return dict(filter(func,self.ObjectDict.items()))
+        return dict(filter(func,self.DefinitionDict.items()))
     
     def refresh(self):
+        if self._definitionDict:
+            self._definitionDict.clear()
+            
         self._definitionDict  = None
         
-    def push(self,name):
-        self.DefinitionDict.update(name,self.definitionCalss(name,layout=self.layout))
+    def push(self,name,obj=None):
+        if not obj:
+            obj = self.definitionCalss(name,layout=self.layout)           
+        self.DefinitionDict.update(name,obj)
     
     def pop(self,name):
         del self.DefinitionDict[name]
@@ -313,7 +332,7 @@ class Definitions(object):
     
     def getUniqueName(self,prefix=""):
         
-        if prefix == None:
+        if prefix is None:
             prefix = "%s_"%self.type
             
         for i in range(1,100000):

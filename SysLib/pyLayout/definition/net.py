@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230410
 
 
@@ -35,18 +35,18 @@ Examples:
     
 '''
 
-
+import time
 import re
 from ..common.common import log
 from ..common.unit import Unit
 from ..common.complexDict import ComplexDict
 from ..common.arrayStruct import ArrayStruct
 from .definition import Definitions,Definition
+from ..primitive.primitive import Primitive
 
 class Net(Definition):
     '''_summary_
     '''
-    maps = {}
     def __init__(self, name = None,layout = None):
         super(self.__class__,self).__init__(name,type="Net",layout=layout)
     
@@ -69,7 +69,7 @@ class Net(Definition):
         
         if self.parsed and not force:
             return
-        maps = self.maps.copy()
+        maps = self.maps
         _array = ArrayStruct([])
         self._info.update("Name",self.name)
         self._info.update("Array", _array)
@@ -184,6 +184,10 @@ class Net(Definition):
             self.layout.Pins[name].backdrill(stub = stub)
             
     def rename(self,newNet):
+        
+        if newNet == self.Name:
+            return
+        
         objs = self.layout.oEditor.FindObjects('Net', self.Name)
 
         if len(objs)==0:
@@ -202,48 +206,118 @@ class Net(Definition):
                         "NAME:ChangedProps",
                         [
                             "NAME:Net",
-                            "Value:="        , newNet
+                            "Value:=", newNet
                         ]
                     ]
                 ]
             ])
     
     
-    def nameNoNet(self):
-        
-        objs = self.getConnectedObjs("line") + self.getConnectedObjs("poly")
-        if not objs:
-            log.info("%s not have objects connected,skip."%self.name)
-            return
-        
-        #SelectPhysicallyConnected
-        self.layout.oEditor.UnselectAll()
-        self.layout.oEditor.SelectPhysicallyConnected(
-            [
-                "NAME:elements", 
-                objs[0]
-            ])
-        objs1 = self.layout.oEditor.GetSelections()
-        
+    def getNetConnected(self):
         #SelectNetConnected
+        
+        obj = None
+        objs = self.getConnectedObjs("poly")
+        if objs:
+            obj = objs[0]
+        
+        if not obj:
+            objs = self.getConnectedObjs("line")
+            if objs:
+                obj = objs[0]
+        
+        if not obj:
+            objs = self.getConnectedObjs("via")
+            if objs:
+                obj = objs[0]
+                
+        if not obj:
+            objs = self.getConnectedObjs("pin")
+            if objs:
+                obj = objs[0]
+        
+        if not obj:
+            log.warning("Net not found any objects: %s"%self.Name)
+            return []
+        
+        
         self.layout.oEditor.UnselectAll()
         self.layout.oEditor.SelectNetConnected(
             [
                 "NAME:elements", 
-                objs[0]
+                obj
             ])
         objs2 = self.layout.oEditor.GetSelections()
+        self.layout.oEditor.UnselectAll()
+        return objs2
+    
+    
+    def getPhysicallyConnected(self):
+        #SelectNetConnected
+        
+        obj = None
+        objs = self.getConnectedObjs("poly")
+        if objs:
+            obj = objs[0]
+        
+        if not obj:
+            objs = self.getConnectedObjs("line")
+            if objs:
+                obj = objs[0]
+        
+        if not obj:
+            objs = self.getConnectedObjs("via")
+            if objs:
+                obj = objs[0]
+                
+        if not obj:
+            objs = self.getConnectedObjs("pin")
+            if objs:
+                obj = objs[0]
+        
+        if not obj:
+            log.warning("Net not found any objects: %s"%self.Name)
+            return []
+        
         
         self.layout.oEditor.UnselectAll()
+        self.layout.oEditor.SelectPhysicallyConnected(
+            [
+                "NAME:elements", 
+                obj
+            ])
+        objs2 = self.layout.oEditor.GetSelections()
+        self.layout.oEditor.UnselectAll()
+        return objs2
+    
+
+    def disjoint(self):
         
-        unNameObjs = list(set(objs1)-set(objs2))
-        if unNameObjs:
-#             log.info("name no-net objes on net %s"%self.name)
-            objs3 = [obj for obj in unNameObjs if "Net" in self.layout.Objects[obj] ]
-            if not objs3:
-                return 
+        objs1 = self.getNetConnected()
+        objs2 = self.getPhysicallyConnected()
+        objs3 = list(set(objs1)-set(objs2))
+        if not objs3:
+            log.info("disjoint not found on net %s"%(self.name))
+            return
+        
+        objList = [list(set(objs1)&set(objs2))]
+        while len(objs3):
+            objName = objs3.pop()
+            objs4 = Primitive(objName,self.layout).getPhysicallyConnected()
+            objList.append(list(objs4))
+            objs3 = list(set(objs3)-set(objs4))
             
-            log.info("Rename objects on net %s: %s"%(self.name,str(objs3)))
+        objList.sort(key=len,reverse=True)
+        log.info("%s will splite to %s part"%(self.name,len(objList)))
+        
+        i =1
+        newName = self.name
+        
+        for each in objList[1:]:
+#             each2 = [x for x in each if "Net" in Primitive(x,self.layout)]
+            newName = "%s_%s"%(self.name,i)
+            i += 1
+            log.info("Rename %s to new net %s"%(str(each),newName))
             self.layout.oEditor.ChangeProperty(
                 [
                     "NAME:AllTabs",
@@ -251,17 +325,37 @@ class Net(Definition):
                         "NAME:BaseElementTab",
                         [
                             "NAME:PropServers"
-                        ]+objs3,
+                        ]+each,
                         [
                             "NAME:ChangedProps",
                             [
                                 "NAME:Net",
-                                "Value:=", self.name
+                                "Value:=", newName
                             ]
                         ]
                     ]
-                ])      
+                ])
+            time.sleep(1) #delay must>1s,bug for 2025R2
+        self.layout.Nets.refresh() 
     
+    
+    def addToPwrGndNets(self):
+        
+        netList = self.PowerNetNames
+        if self.Name not in netList:
+            netList = self.PowerNetNames + [self.Name]
+            log.info("Add power/Ground Nets: %s"%self.Name)
+            self.layout.oEditor.ModifyNetClass("<Power/Ground>", "<Power/Ground>", "",netList)
+            
+    def removeFromPwrGndNets(self):
+        netList = self.PowerNetNames
+        if  self.Name in netList:
+            netList.remove(self.Name)
+            log.info("Remove power/Ground Nets: %s"%self.Name)
+            self.layout.oEditor.ModifyNetClass("<Power/Ground>", "<Power/Ground>", "",netList)
+        else:
+            pass       
+        
     def delete(self):
         self.layout.oEditor.DeleteNets([self.Name])
 
@@ -280,18 +374,18 @@ class Nets(Definitions):
 #             self._definitionDict  = self._getDefinitionDict()
         return self._definitionDict
 
-
     @property
     def SignalNetNames(self):
         allNets = self.layout.oEditor.GetNetClassNets('<All>')
         pwrNets = self.layout.oEditor.GetNetClassNets('<Power/Ground>')
         sigNets = [net for net in allNets if net not in pwrNets]
-        sigNets.remove("<NO-NET>")
+        if "<NO-NET>" in sigNets:
+            sigNets.remove("<NO-NET>")
         return sigNets
         
     @property
     def PowerNetNames(self):
-        return self.layout.oEditor.GetNetClassNets('<Power/Ground>') 
+        return list(self.layout.oEditor.GetNetClassNets('<Power/Ground>')) 
             
     #--- for Nets
     
@@ -299,11 +393,15 @@ class Nets(Definitions):
         
         if isinstance(nets, str):
             nets = [nets]
-        
+        nets = self.getRegularNets(nets)
+        if not nets: return []
+        compList = self.layout.Components.NameList
         temp = []
         for net in nets:
 #             compNames = self.__class__(net).CompNames
             compNames = self.DefinitionDict[net].getConnectedComponnets()
+            # compList = self.layout.Components.NameList
+            compNames = [c for c in compNames if c in compList]  #ignor none type
             if ignorRLC:
                 compNames = [c for c in compNames if self.layout.Components[c].PartType not in ["Resistor","Inductor","Capacitor"]]
             temp += compNames
@@ -312,10 +410,12 @@ class Nets(Definitions):
     
     def createPortsOnNets(self,nets,comps = None,ignorRLC = True):
 
-        if isinstance(nets, str):
-            nets = [nets]
+
+        nets = self.layout.nets.getRegularNets(nets)
+        if not nets:
+            log.info("No nets found, skip to create ports")
          
-        if comps is None:
+        if not comps:
             compNames = self.getComponentsOnNets(nets,ignorRLC)
          
         elif isinstance(comps, str):
@@ -323,7 +423,8 @@ class Nets(Definitions):
          
         else:
             compNames= comps
-             
+        
+        log.info("Create port on net: %s  Compoents: %s"%(",".join(nets),",".join(compNames)))
         self.layout.oEditor.CreatePortsOnComponentsByNet(
             ["NAME:Components"]+compNames,["NAME:Nets"]+nets, "Port", "0", "0", "0")
 
@@ -334,14 +435,16 @@ class Nets(Definitions):
             regNets (str,list): regular net. if space in regNets, will split to list.
             Signals: 需要保留的Signals, 支持多个信号，例如：“net1 net2”中间空格隔开，支持正则表达试，支持[7:0]总线写法”
 
-
         Returns:
             list: netNames list of regular input
         '''
         
+        if not regNets:
+            return []
+        
         if type(regNets) == str:
 #             regNets = [regNets]
-            regNets = regNets.strip().split()
+            regNets = re.split(r"[,;\s]+", regNets.strip()) #regNets.strip().split()
             
         #[7:0]
         nets = []
@@ -360,18 +463,64 @@ class Nets(Definitions):
         nets = []
 
         for regNet in regNets:
-            regNet = regNet.replace("$","\$").strip()
-            nets += filter(lambda x: re.match(regNet+"$",x,re.IGNORECASE),self.NameList)
-        return nets
+            #add full net name with '+'
+            if regNet in self.NameList:
+                nets.append(regNet)
+                continue
+            temp = None
+            if regNet.endswith("$"):
+                temp = regNet[:-1]
+            temp = regNet.replace("$","\$").strip()
+            nets += filter(lambda x: re.match(temp+"$",x,re.IGNORECASE),self.NameList)
+        return list(set(nets))
+    
+    def getGNDRefNet(self,netList = None):
+        nets = netList if netList is not None else self.NameList
+        if "GND" in nets:
+            return "GND"
+        if "VSS" in nets:
+            return "VSS"
+        if "DGND" in nets:
+            return "DGND"
+        if "AGND" in nets:
+            return "AGND"
+        
+        if "AVSS" in nets:
+            return "AGND"
+
+        #返回包含GND/VSS/DGND/AGND的net，优先级：完全匹配>开头匹配>包含匹配，忽略大小写
+        for net in nets:
+            if re.match(r"^(GND|VSS|DGND|AGND)$",net,re.IGNORECASE):
+                return net
+            
+        for net in nets:
+            if re.match(r"^(GND|VSS|DGND|AGND).*$",net,re.IGNORECASE):
+                return net
+            
+        for net in nets:
+            if re.match(r"^.*(GND|VSS|DGND|AGND).*$",net,re.IGNORECASE):
+                return net
+            
+        return None
+    
     
     
     def deleteNets(self,netList):
-        if not isinstance(netList, (list,tuple)) or len(netList)<1:
+        if not isinstance(netList, (list,tuple)):
             log.info("deleteNets input is empty")
             return 
         
-        self.layout.oEditor.DeleteNets(netList)
+#         #移除No-Net
+#         while "<NO-NET>" in netList:
+#             netList.remove("<NO-NET>")
         
+        if len(netList)<1:
+            log.info("deleteNets input is empty")
+            return 
+        
+        log.info("delete nets: %s"%(",".join(netList)))
+        self.layout.oEditor.DeleteNets(netList)
+        self.layout.initObjects()  #add 20250707
         
     def reNameXnetForce(self,regNets,tail="_C"):
         '''
@@ -453,15 +602,95 @@ class Nets(Definitions):
                     log.info(comp.Name+" Nets: "+ pnet + " " + nnet + ": Rename "+ nnet + " to " + pnet+tail)
                     self.layout.Nets[nnet].rename(pnet+tail)
                     
-    def nameNoNets(self):
-        i=0
-        n = self.Count
+    def mergePhysicallyConnectedNets(self):
+
+        netObjectsList = []
         for net in self.All:
-            log.info(("Name unnamed objects on net: %s"%net.name).ljust(50,"-") + "%s/%s"%(i,n))
-            i +=1 
-            if net.name.strip("-").strip() == "":
+            if net.Name in ["----","<NO-NET>","OUTLINES"]:
+                continue 
+            log.info("Get Net Connected objects: %s"%net.Name)
+            objs = net.getNetConnected()
+            if not objs:
                 continue
-            if net.name == "<NO-NET>":
+            netObjectsList.append([net,objs])
+        
+        netObjectsList.sort(key=lambda x:len(x[1]),reverse=True)  #sort by objs count
+        
+        while len(netObjectsList):
+            net,objs1 = netObjectsList.pop(0)
+            log.info("Check Physically Connected on Net: %s"%net.Name)
+            objs2 = net.getPhysicallyConnected()
+            objs3 = list(set(objs2)-set(objs1))
+            if not objs3:
                 continue
-            net.nameNoNet()
+            
+            #short object found
+            netList4 = []
+            objs4 = []
+            for name in objs3:
+                obj3 = Primitive(name,self.layout)
+                if "Net" in obj3:
+                    objs4.append(name)
+                    netName3 = obj3.Net
+                    if netName3 not in netList4: #and netName3 != "----"
+                        netList4.append(netName3)
+                else:
+                    pass
+                
+            log.info("Rename objects on net %s: %s"%(net.Name,str(objs4)))
+            self.layout.oEditor.ChangeProperty(
+                [
+                    "NAME:AllTabs",
+                    [
+                        "NAME:BaseElementTab",
+                        [
+                            "NAME:PropServers"
+                        ]+objs4,
+                        [
+                            "NAME:ChangedProps",
+                            [
+                                "NAME:Net",
+                                "Value:=", net.Name
+                            ]
+                        ]
+                    ]
+                ])
+            
+            newObjectsList = []
+            for obj in netObjectsList:
+                if obj[0].Name not in netList4:
+                    newObjectsList.append(obj)
+                                
+            netObjectsList = newObjectsList
+            
+        self.layout.Nets.refresh()
+        
+    def disjointNets(self):
+
+        for net in list(self.All):
+            if net.Name in ["----","<NO-NET>","OUTLINES"]:
+                continue
+            net.disjoint()
+   
+#         self.layout.Nets.refresh() 
+
+    def addPwrGndNets(self,nets):
+        netList = self.getRegularNets(nets)
+        if netList:
+            netList += self.PowerNetNames
+            netList = list(set(netList))
+            log.info("Add power/Ground Nets: %s"%str(netList))
+            self.layout.oEditor.ModifyNetClass("<Power/Ground>", "<Power/Ground>", "",netList)
+        else:
+            log.warning("Nets not found in layout: %s"%str(nets))
+            
+    def removePwrGndNets(self,nets):
+        netList = self.getRegularNets(nets)
+        if netList:
+            pwrGnds = self.PowerNetNames
+            pwrGnds = [net for net in pwrGnds if net not in netList]
+            log.info("Remove power/Ground Nets: %s"%str(pwrGnds))
+            self.layout.oEditor.ModifyNetClass("<Power/Ground>", "<Power/Ground>", "",pwrGnds)
+        else:
+            log.warning("Nets not found in layout: %s"%str(nets))
             

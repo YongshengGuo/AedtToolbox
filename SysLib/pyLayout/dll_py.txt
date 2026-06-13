@@ -24,7 +24,6 @@ pyLayout/definition/net.py
 pyLayout/definition/padStack.py
 pyLayout/definition/path.py
 pyLayout/definition/setup.py
-pyLayout/definition/spiceModel.py
 pyLayout/definition/variable.py
 pyLayout/definition/__init__.py
 pyLayout/model3D/Aedt3DToolBase.py

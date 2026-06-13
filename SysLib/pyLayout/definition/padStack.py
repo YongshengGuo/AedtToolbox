@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230828
 
 
@@ -25,19 +25,21 @@ class PadStack(Definition):
 
     Args:
     '''
-    
-    maps = {
-        "DrillSize":{"Key":"psd/hle/Szs","Get":lambda x:x[0] if len(x) else None},
-        }
+    #variable not in info
     mapsPDS = {
         "PadSize":{"Key":"pad/Szs","Get":lambda x:x[0] if len(x) else None},
         "AntipadPadSize":{"Key":"ant/Szs","Get":lambda x:x[0] if len(x) else None},
         "ThermalPadSize":{"Key":"thm/Szs","Get":lambda x:x[0] if len(x) else None}
         }
     
+    
     def __init__(self, name = None,layout = None):
         super(self.__class__,self).__init__(name,type="Padstack",layout=layout)
-
+        self.maps = {
+            "DrillSize":{"Key":"psd/hle/Szs","Get":lambda x:x[0] if len(x) else None},
+            "PlatingPercent":"psd/plt",
+            "Material":"mat"
+            }
 
     def parse(self,force = False):
         super(self.__class__,self).parse(force)
@@ -49,7 +51,6 @@ class PadStack(Definition):
             lgm = ArrayStruct(pd,maps=self.mapsPDS)
             self._info.update(lgm.lay, lgm)
 
-    
     def appendLayer(self,layerName,update=True):
         self.Info.append("psd/pds",
             [
@@ -71,10 +72,12 @@ class PadStack(Definition):
             self["psd/pds"] = ["NAME:pds"]
         
         for layerName in self.layout.Layers.ConductorLayerNames:
-            self.appendLayer(layerName,update=False)
-            
+            self.appendLayer(layerName,update=False) 
         self.update()
         
+    # def setPlatingPercent(self,platingPercent):
+    #     self["psd/plt"] = str(platingPercent)
+    #     self.update()
 
     def place(self,position,upperLayer,lowerLayer,isPin = False):
         '''
@@ -84,32 +87,6 @@ class PadStack(Definition):
         
         self.layout.addVia(self,position,upperLayer,lowerLayer,isPin)
         
-#         if len(center)!=2:
-#             log.exception("Center must have length 2")
-#             
-#         if not layerLower:
-#             layerLower = layerUpper
-#         
-#         name = self.layout.oEditor.CreateVia(
-#             [
-#                 "NAME:Contents",
-# #                 "name:="        , "pad_0000",
-#                 "ReferencedPadstack:="    , self.Name,
-#                 "vposition:="        , ["x:=", center[0],"y:=",center[1]],
-#                 "vrotation:="        , ["0deg"],
-#                 "overrides hole:="    , False,
-#                 "hole diameter:="    , ["0mm"],
-#                 "Pin:="            , isPin,
-#                 "highest_layer:="    , layerUpper,
-#                 "lowest_layer:="    , layerLower
-#             ])
-#         
-#         if isPin:
-#             self.layout.Pins.push(name)
-#         else:
-#             self.layout.Vias.push(name)
-#         
-#         return name
 
 class PadStacks(Definitions):
     

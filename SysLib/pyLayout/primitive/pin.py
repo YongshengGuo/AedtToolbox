@@ -75,30 +75,39 @@ class Pin(Primitive):
         if self.parsed and not force:
             return
         
-        super(self.__class__,self).parse(force) #initial component properties
+        super(self.__class__,self).parse(force=True) #initial component properties
         
         name = self.name
-        maps = self.maps.copy()
+        maps = self.maps
         names = re.split(r"[.-]+", name, maxsplit = 1)
-        if len(names) <2:
-#                 log.exception("pinName pattern error: %s, should be like: U1-A1 or U1.A1"%pinName) 
+        
+        if "Component Pin" in self and len(names) >1:
+            #in component
+            self._info.update("CompName",names[0])
+            self._info.update("pinName",names[-1]) #self["Component Pin"]
+        else:
             log.debug("floating pin found: %s"%name)
             self._info.update("CompName",None)
             self._info.update("pinName",name)
-        else:
-            self._info.update("CompName",names[0])
-            self._info.update("pinName",names[1])
-  
         
-        comp = self._info.CompName
-        
-        if comp in self.layout.Components:
-            pinInfo = self.layout.oEditor.GetComponentPinInfo(comp, name)
-            for k,v in filter(lambda x:len(x)==2,[i.split("=",1) for i in pinInfo]):
-                self._info.update(k,v)
-        
-#         else:
-#         # GetComponentPinInfo ConnectionPoints not right
+            comp = names[0]
+            if comp in self.layout.Components:
+                pinInfo = self.layout.oEditor.GetComponentPinInfo(comp, name)
+                for k,v in filter(lambda x:len(x)==2,[i.split("=",1) for i in pinInfo]):
+                    self._info.update(k,v)
+            else:
+                compObj = self.layout.Components.findComponentByPin(self.name)
+                if compObj:
+                    self._info.update("CompName",compObj.Name)
+                    self._info.update("pinName",self.name)
+                    pinInfo = self.layout.oEditor.GetComponentPinInfo(compObj.Name, name)
+                    for k,v in filter(lambda x:len(x)==2,[i.split("=",1) for i in pinInfo]):
+                        self._info.update(k,v)
+                else:
+                    log.error("component not found for pin %s"%self.name)
+                    self._info.update("CompName",None)
+                    self._info.update("pinName",self.name)
+
         maps.update({"X":{
             "Key":"self",
             "Get":lambda v:v.Location.xvalue
@@ -118,6 +127,7 @@ class Pin(Primitive):
             }})
         
         self._info.setMaps(maps)
+        self.parsed = True
                 
     
     def getInscribedDiameter(self):
@@ -140,23 +150,7 @@ class Pin(Primitive):
         else:
             return None
     
-#     def getConnectedObjs(self, type="*", layer = None):
-#         if not self.Net:
-#             log.info("via not have net name")
-#             return []
-#         objs =  self.layout.oEditor.FindObjects('Net', self.Net)
-#         objs = self.layout.oEditor.FilterObjectList('Type',type,objs) #filter object
-#         if layer:
-#             objs = self.layout.oEditor.FilterObjectList('Layer',self.layout.Layers[layer].Name, objs) #filter layer
-#         
-#         try:
-#             pt = self.layout.oEditor.Point().Set(self.X,self.Y)
-#             objC = [obj for obj in objs if self.layout.oEditor.GetPolygon(obj).CircleIntersectsPolygon(pt,0.1e-3)]
-#         except:
-#             log.info("Try to get getConnected Objs error,return []")
-#             objC = []
-#         return objC
-    
+
 
     def backdrill(self,stub = None):
         '''
@@ -166,9 +160,45 @@ class Pin(Primitive):
         if self.isSMTPad: 
             return
         
+    def backdrill(self,stub = None):
+        '''
+        this function only support 2023.1 or later versions 
+        stub: str or dict {layerName:"stubTop,stubTop",
+        defalut:stubTop,stubBottom,"Tail":top,bottom} 
+        '''
+        
+        if self.isSMTPad: 
+            return
+        
         if stub == None:
             stub = self.layout.options["H3DL_backdrillStub"]
+            
+        if isinstance(stub,str):
+            stubs = re.split("[,;]",stub)
+            if len(stubs)==1:
+                stub = {"default":[stubs[0],stubs[0]]}
+            elif len(stubs)==2:
+                stub = {"default":stubs}
+            else:
+                log.exception("stub format error %s " % str(stub))
         
+        if isinstance(stub,(dict,ComplexDict)):
+            for layer,stubs in stub.items():
+                if isinstance(stubs,str):
+                    stubs = re.split("[,;]",stubs)
+                
+                if not isinstance(stubs,(list,tuple)):
+                    log.exception("stub format error %s " % str(stub))
+                
+                if len(stubs)==1:
+                    stub[layer] = [stubs[0],stubs[0]]
+                elif len(stubs)==2:
+                    stub[layer] = stubs
+                else:
+                    log.error("stub format error %s " % str(stub))
+            if "default" not in stub:
+                stub["default"] = [self.layout.options["H3DL_backdrillStub"],self.layout.options["H3DL_backdrillStub"]] #last layer
+        stub = ComplexDict(stub)
         layers = []
         #for lines
         names = self.getConnectedObjs('line')
@@ -176,32 +206,65 @@ class Pin(Primitive):
             line = self.layout.lines[name]
             layers.append(line["PlacementLayer"])
         
-        #for smt pad
-#         names = self.getConnectedObjs('pin')
-#         for name in names:
-#             pin = self.layout.pins[name]
-#             if pin.isSMTPad: layers.append(pin["Start Layer"])
-        if self.CompName:
-            layers.append(self.layout.Components[self.CompName].PlacementLayer)
+
+        #for pins
+        names = self.getConnectedObjs('pin')
+        for name in names:
+            pin = self.layout.pins[name]
+            CompName = pin.CompName
+            if CompName in self.layout.components:
+                layers.append(self.layout.components[CompName]["PlacementLayer"])
         
         if len(layers)<2: #small then two layers
-            log.info("small then two layers, skip backdrill")
             return
         
         layers.sort(key = lambda x: Unit(self.layout.layers[x].Lower).V,reverse = True)
         #---backdrill Top
         if layers[0] != self.layout.layers["C1"].Name:
-            log.info("Backdrill vias : %s from Top to %s, stub:%s, net:%s"%(self.name,layers[0],stub,self.Net))
+            stubLen = stub[layers[0]][0] if layers[0] in stub else stub["default"][0]
+            if "Tail" in stub and stub["Tail"]:
+                disBot = Unit(self.layout.layers[layers[0]].Lower)-Unit(self.layout.layers["CB1"].lower)
+                if Unit(stub["Tail"][-1])>disBot:
+                    stubLen = (Unit(stub["Tail"][-1]) - disBot)["mil"]
+            
+            log.info("Backdrill pin : %s from Top to %s, stub:%s, net:%s, stub: %s"%(self.name,layers[0],stub,self.Net,stubLen))
             self.BackdrillTop = layers[0]
-            self.TopOffset = stub
+            self.TopOffset = stubLen
             self.update()
         #---backdrill bottom
         if layers[-1] != self.layout.layers["CB1"].Name:
-            log.info("Backdrill vias : %s from Bottom to %s, stub:%s, net:%s"%(self.name,layers[-1],stub,self.Net))
+            stubLen = stub[layers[0]][-1] if layers[0] in stub else stub["default"][-1]
+            if "Tail" in stub and stub["Tail"]:
+                disTop = Unit(self.layout.layers["C1"].lower) - Unit(self.layout.layers[layers[-1]].Lower)
+                if Unit(stub["Tail"][0])>disTop:
+                    stubLen = (Unit(stub["Tail"][0]) - disTop)["mil"]         
+            log.info("Backdrill pin : %s from Bottom to %s, stub:%s, net:%s, stub: %s"%(self.name,layers[-1],stub,self.Net,stubLen))
             self.BackdrillBottom = layers[-1]
-            self.BottomOffset = stub
+            self.BottomOffset = stubLen
             self.update()
 
+    def getNearestRefPin(self,PinList = None, net = None):
+        '''
+        get nearest pin to self
+        '''
+        if not PinList and net:
+            # PinList = self.layout.Nets[net].getConnectedObjs("pin")
+            PinList = [pin for pin in self.layout.Components[self.CompName].Pins if pin.Net == net]
+
+        if not PinList:
+            log.exception("PinList is empty. Please check Pinlist.")
+
+        nearPin = None
+        nearDis = 1e9
+        for pin in PinList:
+            if isinstance(pin,str):
+                pin = self.layout.pins[pin]
+            dis = abs((pin.Location - self.Location))
+            if dis < nearDis:
+                nearPin = pin
+                nearDis = dis
+
+        return nearPin
 
 class Pins(Primitives):
     

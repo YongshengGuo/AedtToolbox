@@ -1,5 +1,5 @@
 #--- coding:utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 2023-04-24
 
 '''
@@ -17,13 +17,67 @@ from .primitive import Primitive,Primitives
 from .geometry import Point
 
 
+# def sortBus(net):
+    
+    
+# #     sums = sum([float(i) for i in nums]) if nums else 1e9
+# #     return residual.upper(),net.upper().count("R"),sums,net.upper().count("N")+net.count("-")+net.count("#")
+#     nums = re.findall(r"\d+",net,re.I) #number
+#     numsList = [0]*10
+#     for i in range(len(nums)):
+#         numsList[i] = int(nums[i])
+
+#     residual = re.sub(r"[\dPNTRC#+-]+", "", net)
+#     return [residual.upper(),net.upper().count("R")] + numsList + [net.upper().count("N")+net.count("-")+net.count("#")++net.count("C")]
+#     #R: Tx, Rx, N: P/N +/- # T/C
 
 def sortBus(net):
-    nums = re.findall(r"\d+",net,re.I) #number
-    residual = re.sub(r"[\dPNTR+-]+", "", net)
-    sums = sum([float(i) for i in nums]) if nums else 1e9
-    return residual,net.upper().count("R"),sums,net.upper().count("N")+net.count("-")+net.count("#")
-    #R: Tx, Rx, N: P/N +/- #
+    """
+    解析信号名以生成排序键。
+    旨在正确处理如 CK, CS, DQS, RDQS, DQ0-63, Tx0P, TXN 等信号。
+    支持极性标识位于中间或末尾。
+    """
+    if not net:
+        return ["", 0] + [0] * 10 + [0]
+
+    # 1. 预处理：移除极性/类型标识 (P, N, T, C, R)
+    # 规则：移除紧跟在分隔符(_,-,#)后或数字后，且位于单词边界或结尾的 P/N/T/C/R
+    # 例如: Tx0P -> Tx0, CK_T -> CK, DQS_N -> DQS, RDQS -> RDQS (R不在末尾且非分隔符后，保留? 不，RDQS的R是Read，应保留)
+    # 下面的正则会移除 _P, -N, _T 等，以及末尾的 P/N (如 DQ0P)
+    # 注意：RDQS 中的 R 不会被移除，因为它前面是 D(字母) 且不是分隔符，也不在末尾(如果后面有QS)
+    # 但如果信号叫 DRAM_R, 这里的 R 会被移除吗？ (?<=[\d_\-#]) 要求前面是数字或分隔符。
+    
+    # # 更简单的策略：移除所有 _P, _N, _T, _C, _R, -P... 以及末尾的 P,N,T,C,R (如果前面是数字)
+    # temp_net = re.sub(r"[_\-#x](P|N|T|C|R)\b", "", net, flags=re.IGNORECASE) # 移除分隔符+极性,考虑Txp/n
+    # temp_net = re.sub(r"(\d)(P|N|T|C|R)\b", r"\1", temp_net, flags=re.IGNORECASE) # 移除数字+极性 (DQ0P -> DQ0)
+
+    temp_net = re.sub(r"(P|N|T|C)", "", net, flags=re.IGNORECASE) # 移除极性,考虑Txp/n
+    # temp_net = re.sub(r"(\d)(P|N|T|C|R)\b", r"\1", temp_net, flags=re.IGNORECASE) # 移除数字+极性 (DQ0P -> DQ0)
+    
+    # 2. 提取数字
+    nums = re.findall(r"\d+", temp_net)
+    numsList = [0] * 10
+    for i in range(min(len(nums), 10)):
+        numsList[i] = int(nums[i])
+        
+    # 3. 提取残差 (移除所有数字和常见分隔符)
+    residual = re.sub(r"[\d_\-#\[\]]+", "", temp_net)
+    
+    # 清理可能产生的多余空字符或纯空白
+    residual = residual.strip()
+    
+    if not residual:
+        # Fallback: 如果全被移除了，尝试从原名提取纯字母
+        residual = re.sub(r"[\d_\-#\[\]]+", "", net)
+        if not residual:
+            residual = net
+
+    # 4. 其他因子
+    has_Rx = net.upper().count("R")
+    complexity = net.upper().count('N') + net.count('-') + net.count('#') + net.upper().count('C')
+
+    return [residual.upper(), has_Rx] + numsList + [complexity]
+
 
 
 class Port(Primitive):
@@ -35,7 +89,7 @@ class Port(Primitive):
         
         super(self.__class__,self).parse(force) #initial component properties
         
-        maps = self.maps.copy()
+        maps = self.maps
         EMProperties = self.layout.oEditor.GetProperties("EM Design","Excitations:%s"%self.Name)
         self._info.update("EMProperties",EMProperties)
         for prop in EMProperties:
@@ -90,7 +144,15 @@ class Port(Primitive):
      
     def setPortImpedance(self,value):
         self.set("Impedance", str(value))
-        self.set("Renormalize Impedence", str(value))
+        
+        if self.layout.isVersionAfter("2024.2"):
+            self.set("Renormalize Impedance", str(value))
+            return
+        
+        try:
+            self.set("Renormalize Impedance", str(value)) #last then 2024.R2
+        except:
+            self.set("Renormalize Impedence", str(value)) #before Impedence
         
     def setSIwavePortRefNet(self,value):
         self.set("Reference Net", str(value))
@@ -145,8 +207,12 @@ class Port(Primitive):
             log.info("Rename %s to %s"%(self.Name,newName))
             self.Port = newName
         
+    def delete(self):
         
-    
+        self.Collection.pop(self.Name)
+        oModule = self.layout.oDesign.GetModule("Excitations")
+        oModule.DeleteExcitation([self.Name])
+
 class Ports(Primitives):
     
     def __init__(self,layout=None):
@@ -230,16 +296,63 @@ class Ports(Primitives):
                 unRulePorts.append(name)
         
         rulePorts.sort(key= lambda p:self._portOrderRule(p, compOrder, netOrder))
-        log.info("re order port %s"%(".".join(rulePorts+unRulePorts)))
+        log.info("re order port %s"%(", ".join(rulePorts+unRulePorts)))
         oModule = self.layout.oDesign.GetModule("Excitations")
         oModule.ReorderMatrix(rulePorts+unRulePorts)
         return rulePorts+unRulePorts
     
-    def addPinGroupPort(self,posPins,refPins,name=None,portZ0=0.1):
-        
-        #remove pins not in layout
-        posPins = [pin for pin in posPins if pin in self.layout.Pins]
-        refPins = [pin for pin in refPins if pin in self.layout.Pins]
+    def add(self,netNames,compNames=None):
+        return self.layout.Nets.createPortsOnNets(netNames,compNames,ignorRLC = True)
+
+    def addPinGroupPort(self,posPins=None,refPins=None,compName=None,posNet=None,negNet=None,name=None,portZ0=0.1):
+
+        if not posPins:
+            if compName and posNet: 
+                posPins = [pin.Name for pin in self.layout.Components[compName].Pins if pin.Net.lower() == posNet.lower()]
+            else:
+                log.exception("posPins or compName,posNet should be specified one")
+        else:
+            #remove pins not in layout
+            PinNames = self.layout.Components[compName].PinNames
+            
+            if compName and not posPins[0].startswith(compName):
+                # short Pin Name
+                posPins = ["%s-%s"%(compName,p) for p in posPins]
+            else:
+                # full Pin Name
+                pass
+            
+            tempPins = []
+            for pin in posPins:
+                if pin in PinNames:
+                    tempPins.append(pin)
+                else:
+                    log.info("Pin %s not in Component %s, will be remove."%(pin,compName))
+            posPins = tempPins
+
+        if not refPins:
+            if compName and negNet: 
+                refPins = [pin.Name for pin in self.layout.Components[compName].Pins if pin.Net.lower() == negNet.lower()]
+            else:
+                log.exception("refPins or compName,negNet should be specified one")
+        else:
+            #remove pins not in layout
+            PinNames = self.layout.Components[compName].PinNames
+            if compName and not refPins[0].startswith(compName):
+                # short Pin Name
+                refPins = ["%s-%s"%(compName,p) for p in refPins]
+            else:
+                # full Pin Name
+                pass
+            
+            
+            tempPins = []
+            for pin in refPins:
+                if pin in PinNames:
+                    tempPins.append(pin)
+                else:
+                    log.info("Pin %s not in Component %s, will be remove."%(pin,compName))
+            refPins = tempPins
         
         if len(posPins)<1:
             log.info("PinGroup posPins have no pin. skip.")
@@ -274,6 +387,10 @@ class Ports(Primitives):
                 ["NAME:%s"%posPortName]+posPins,
                 ["NAME:%s"%refPortName]+refPins
             ])
+            
+        self.layout.PinGroups.push("%s"%posPortName,self.layout.PinGroups.definitionCalss("%s"%posPortName,posPins,self.layout))
+        self.layout.PinGroups.push("%s"%refPortName,self.layout.PinGroups.definitionCalss("%s"%refPortName,refPins,self.layout))
+        
         self.layout.oEditor.CreatePinGroupPort(
             [
                 "Port:="        , posPortName,
@@ -286,6 +403,8 @@ class Ports(Primitives):
     
         if name:
             self.layout.Ports[posPortName]["Port"] = name
+        else:
+            name = posPortName
 
-        return self.layout.Ports[name]
+        return  self[name]
         

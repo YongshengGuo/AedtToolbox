@@ -1,5 +1,5 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230410
 """
     Examples:
@@ -32,16 +32,18 @@ get component information from oEditor.GetComponentInfo API
 
 import re
 import os
+from itertools import groupby
 from ..common import hfss3DLParameters
 from ..common.arrayStruct import ArrayStruct
 from ..common.complexDict import ComplexDict
 from ..common.unit import Unit
-from ..common.common import log
-from ..definition.spiceModel import Subckt
+from ..common.common import log,writeCSV
+from ..netlist.spiceModel import SpiceModel
 
 from collections import Counter
 from .primitive import Primitive,Primitives
 from ..common.progressBar import ProgressBar
+from .pin import Pin
 
 class Component(Primitive):
     '''
@@ -85,7 +87,7 @@ class Component(Primitive):
         
         comp = self.name
         componentInfo = self.layout.oEditor.GetComponentInfo(comp)
-        maps = self.maps.copy()
+        maps = self.maps
         
         for k,v in filter(lambda x:len(x)==2,[i.split("=",1) for i in componentInfo]):
             self._info.update(k,v)
@@ -108,6 +110,12 @@ class Component(Primitive):
         #pins objects
         maps.update({"Pins":{
             "Key":"self",
+            #"Get":lambda s:[s.layout.Pins[name] for name in s.layout.oEditor.GetComponentPins(s.name)]
+            "Get":lambda s:[Pin(name,self.layout) for name in s.layout.oEditor.GetComponentPins(s.name)]
+            }})
+
+        maps.update({"Pins2":{
+            "Key":"self",
             "Get":lambda s:[s.layout.Pins[name] for name in s.layout.oEditor.GetComponentPins(s.name)]
             }})
         
@@ -118,7 +126,7 @@ class Component(Primitive):
         
         maps.update({"NetNames":{
             "Key":"self",
-            "Get":lambda s: list(set([s.layout.Pins[p].Net for p in s.layout.oEditor.GetComponentPins(s.name)]))
+            "Get":lambda s: list(set([Pin(p,self.layout).Net for p in s.layout.oEditor.GetComponentPins(s.name)]))
             }})
         
         maps.update({"Nets":{
@@ -155,67 +163,62 @@ class Component(Primitive):
           ])
         
         self.Info["ComponentType"] = type
+        self.Info["Part Type"] = type
         
-    def createSolderBall(self,size = None ,solderMaterial = "solder", pecSize = ""):
+    def createSolderBall(self,size = None ,solderMaterial = "solder", pecSize = None,solderOptions = None):
         """
         size = Height,width,Mid
         size = ["14mil","14mil"] or [Auto,Auto]
         "SolderBallProp:=",["sbsh:=",typ,  "sbh:=",size[0],  "sbr:=",size[1],  "sb2:=",size[2],  "sbn:=",solderMaterial],
         
         """
-        log.info("Create solderball on component: %s, size: %s"%(self.name,str(size)))        
-            
+        log.info("Create solderball on component: %s, size: %s"%(self.name,str(size)))
+        
+        if isinstance(size, str):
+            size = re.split(r"[,;\s]+", size.strip())
+        
+        #20250718
         if size==None or str(size[0]).lower()=="auto" or str(size[1]).lower()=="auto":
-            pskNames = []
-            for pin in self.Pins: #[:20]
-                pskNames.append(pin["Padstack Definition"])
+            #most pins size, 20260129
+            pin10 = self.Pins[:10]
+            bbox10 = [obj.BBox for obj in pin10]
+            diameter10 = [min(abs(bbox[1].X-bbox[0].X),abs(bbox[1].Y-bbox[0].Y)) for bbox in bbox10]
+            count = Counter(diameter10)
+            most_common = count.most_common(1)
+            diameter = most_common[0][0]
             
-            count = Counter(pskNames)
-            pskName = count.most_common(1)[0][0] #find most padstack
-            psk = self.layout.PadStacks[pskName]
-            layerName = self["PlacementLayer"]
-            pskl = psk[layerName]
-            if not pskl:
-                pskl = ArrayStruct(psk["psd/pds"][1])
-            shp = pskl.pad.shp
-            szs = pskl.pad.Szs
-            
-            if shp == "Rct":
-                size1 = (Unit(szs[0])).V if (Unit(szs[0])).V< (Unit(szs[1])).V else (Unit(szs[1])).V
-            elif  shp == "Cir":
-                size1 = (Unit(szs[0])).V
-            elif  shp == "Sq":
-                size1 = (Unit(szs[0])).V
-            else:
-                log.exception("pad shape unknown: %s"%shp)
-            
-            
-#             size2 = [(Unit(size1)*0.7)["mm"],(Unit(size1)*0.6)["mm"]] #Height 0.7x from solder, width 0.6x from aedt
-            size2 = [(Unit(size1)*self.layout.options["H3DL_solderBallHeightRatio"])["mm"],(Unit(size1)*self.layout.options["H3DL_solderBallWidthRatio"])["mm"]] #Height 0.7x from solder, width 0.6x from aedt
-            
+#             bbox = self.Pins[0].BBox
+#             diameter = min(abs(bbox[1].X-bbox[0].X),abs(bbox[1].Y-bbox[0].Y))
+            size2 = [(Unit(diameter)*self.layout.options["H3DL_solderBallHeightRatio"])["mm"],(Unit(diameter)*self.layout.options["H3DL_solderBallWidthRatio"])["mm"]] #Height 0.66x from solder, width 0.8x from aedt
             #20231106 for [Auto,Auto]
-            if size[0].lower()=="auto" :
-                size[0] = size2[0] 
-                
-            if size[1].lower()=="auto" :
-                size[1] = size2[1] 
-                
+
             if size==None:
                 size = size2
                 log.info("Create solderball on component: %s, size: %s"%(self.name,str(size)))
+            elif isinstance(size,(list,tuple)):
+                if size[0].lower()=="auto" :
+                    size[0] = size2[0] 
+                    
+                if size[1].lower()=="auto" :
+                    size[1] = size2[1] 
+            else:
+                log.info("solderball size error, Create solderball use default value: %s, size: %s"%(self.name,str(size)))
+                size = size2
+                
+            log.info("Create solderball on component: %s, size: %s"%(self.name,str(size)))
 
-        
-        
-        ary = ArrayStruct(hfss3DLParameters.solderBall).copy()
+        ary = ArrayStruct(hfss3DLParameters.solderBall,
+                          maps={"SolderMaterial":"BaseElementTab/ChangedProps/Model Info/Model/IOProp/SolderBallProp/sbn"}
+                          ).copy()
         solder = ary["BaseElementTab/ChangedProps/Model Info/Model/IOProp/SolderBallProp"]
-        
+
         if len(size) == 2:
             solder["sbsh"] = "Cyl"
             solder["sbh"] = size[0]
             solder["sbr"] = size[1]
             solder["sb2"] = size[1]
             solder["sbn"] = solderMaterial
-            ary["BaseElementTab/ChangedProps/Model Info/Model/IOProp/SolderBallProp/sbn"] = solderMaterial
+ 
             
         if len(size) == 3:
             solder["sbsh"] = "Sph"
@@ -223,89 +226,183 @@ class Component(Primitive):
             solder["sbr"] = size[1]
             solder["sb2"] = size[2]
             solder["sbn"] = solderMaterial
-
+        
+        if pecSize:
+            if isinstance(pecSize, str):
+                pecSize = pecSize.split(",")
+            if isinstance(pecSize,(list,tuple)) and len(pecSize)==2:
+                pecProp = ary["BaseElementTab/ChangedProps/Model Info/Model/IOProp/PortProp"]
+                pecProp["rsa"] = False
+                pecProp["rsx"] = pecSize[0]
+                pecProp["rsy"] = pecSize[1]
+            else:
+                log.error("pecSize %s format error,skip."%str(pecSize))
+                
+        log.info("Set solderball PEC Size on component: %s, size: %s"%(self.name,str(pecSize)))
         PropServers = ary["BaseElementTab/PropServers"]
         PropServers.Array[1] = self.name
+        
+        if solderOptions:
+            for k,v in solderOptions.items():
+                try:
+                    ary[k] = v
+                except:
+                    count = ary.updateByKey(k,v)
+                    if count:
+                        log.info("update %s to %s"%(k,v))
+                    else:
+                        log.info("ignor unknown options: %s=%s."%(k,v))
+
         #change the type to IO
         self.changePartType("IO")
         self.layout.oEditor.ChangeProperty(ary.Array)
 
     
-    
-    def addSnpModel(self,path):
+    def addSnpModel(self,path,pinMap=None):
+        '''
+        bug: model can't be update twice
+        '''
         
         # model->ComponentDefs->Part
         log.info("Add touchstone model to component '%s': %s"%(self.name,path))
         modelName = self.part + "_" + os.path.basename(path)# + "_1"
-        modelName = re.sub("[\.\s#]","_",modelName) #replace illegal character
-        
-        relPath = self.layout.getRelPath(path)
-        
-        if modelName not in self.layout.modelDefs:
-            self.layout.modelDefs.addSnpModel(relPath,name=modelName)
-    #         self.layout.ComponentDefs.addSNPDef(modelName)
-            self.layout.ComponentDefs.addSNPDef(modelName)
+        modelName = re.sub("[\.\s/#]","_",modelName) #replace illegal character
+        relPath = path #self.layout.getRelPath(path), test show bug in hfss 202510216
+        nodes = []
+        pinNames = []
+        if pinMap:
+            splits = pinMap.split(":")
+            if len(splits) == 1:
+                #only nodes given
+                nodes = [s.strip() for s in splits[0].split()]
+                pinNames = None
+            elif len(splits) > 1:
+                nodes = [s.strip() for s in splits[0].split()]
+                pinNames = [s.strip() for s in splits[1].split()]
+            else:
+                log.error("Invalid pinMap %s"%pinMap)
+
+            if not nodes:
+                portCount = int(re.sub(r"[A-Za-z]","",path.split(".")[-1]))
+                nodes = ["Port%s"%(n+1) for n in range(portCount) ]
+            if not pinNames:
+                pinNames = self.ShortPinNames
+
+            if len(nodes) != len(pinNames):
+                log.exception("pin count not match with subckt node.")
             
-            #AddSolverOnDemandModel
-            oDefinitionManager = self.layout.oProject.GetDefinitionManager()
-            oComponentManager = oDefinitionManager.GetManager("Component")
-            oComponentManager.AddSolverOnDemandModel(self.part, 
-                [
-                    "NAME:CosimDefinition",
-                    "CosimulatorType:="    , 102,
-                    "CosimDefName:="    , modelName,
-                    "IsDefinition:="    , True,
-                    "Connect:="        , True,
-                    "ModelDefinitionName:="   , modelName,
-                    "ShowRefPin2:="        , 2,
-                    "LenPropName:="        , ""
-                ])
+        self.changePartType(type="Capacitor") #must change to RLC for 2025R1 now
+        self.layout.modelDefs.addSnpModel(relPath,name=modelName,pinMap=[nodes,pinNames])
+        self.layout.ComponentDefs.addSNPDef(self.part,modelName,pinMap=[nodes,pinNames]) #Edit part model
         
-        self.layout.oEditor.ChangeProperty(
-            [
-                "NAME:AllTabs",
+        netRef = self.layout.Nets.getGNDRefNet(self.NetNames)
+        if not netRef:
+            netRef = self.layout.Nets.getGNDRefNet()
+        if not netRef:
+            netRef = self.layout.Nets.PowerNetNames[0] if self.layout.Nets.PowerNetNames else self.layout.Nets.NameList[-1]
+            log.warning("No GND net found in layout, use %s as reference net for SNP model."%netRef)
+
+        if self.layout.isVersionBefore("2026.1"): #SNP modle API changing in 2026.1
+            self.layout.oEditor.ChangeProperty(
                 [
-                    "NAME:BaseElementTab",
+                    "NAME:AllTabs",
                     [
-                        "NAME:PropServers",  self.name
-                    ],
-                    [
-                        "NAME:ChangedProps",
+                        "NAME:BaseElementTab",
                         [
-                            "NAME:Model Info",
-                            "ExtraText:=", "",
+                            "NAME:PropServers",  self.name
+                        ],
+                        [
+                            "NAME:ChangedProps",
                             [
-                                "NAME:Model",
-                                "RLCProp:=", ["CompPropEnabled:=", True,"Pid:=", -1,"Pmo:=", "0","CompPropType:=", 0, 
-                                "PinPairRLC:=", ["RLCModelType:=", 1,    "NetRef:=", "GND",    "CosimDefintion:=", modelName]],
-                                "CompType:=", 3
+                                "NAME:Model Info",
+                                "ExtraText:=", "",
+                                [
+                                    "NAME:Model",
+                                    "RLCProp:=", ["CompPropEnabled:=", True,"Pid:=", -1,"Pmo:=", "0","CompPropType:=", 0, 
+                                    "PinPairRLC:=", ["RLCModelType:=", 1,    "NetRef:=", netRef,    "CosimDefintion:=", modelName]],
+                                    "CompType:=", 3
+                                ]
                             ]
                         ]
                     ]
-                ]
-            ])
+                ])
+        else:
+            #for 2026.1
+            self.layout.oEditor.ChangeProperty(
+                [
+                    "NAME:AllTabs",
+                    [
+                        "NAME:BaseElementTab",
+                        [
+                            "NAME:PropServers",  self.name
+                        ],
+                        [
+                            "NAME:ChangedProps",
+                            [
+                                "NAME:Model Info",
+                                [
+                                    "NAME:Model",
+                                    "RLCProp:="		, ["CompPropEnabled:="	, True,"Pid:=", -1,"Pmo:=", "0","CompPropType:="	, 0,
+                                    "PinPairRLC:=", ["RLCModelType:="	, 1,"NetRef:=", netRef,"CosimDefintion:="	, modelName, 
+                                    "IgnoreForDC:=", -1,"ModelName:=", modelName ,"ReferenceFile:="	, path]],
+                                    "CompType:=", 3
+                                ]
+                            ]
+                        ]
+                    ]
+                ])
+
+
         
+    def addSpiceModel(self,path,pinMap=None):
+        '''_summary_
+
+        Args:
+            path (_type_): _description_
+            pinMap: "nodes:pinNames"
         
-    def addSpiceModel(self,path):
-        
+        Note: must change component to RLC components before add spice model
+        '''
+
         log.info("Add spice model to component '%s': %s"%(self.name,path))
         modelName = self.part + "_" + os.path.basename(path)
         modelName = re.sub("[\.\s#]","_",modelName) #replace illegal character
         
-        relPath = self.layout.getRelPath(path)
-#         if modelName not in self.layout.modelDefs:
-#             self.layout.modelDefs.addSpiceModel(path,name=modelName)
-#             self.layout.ComponentDefs.addSpiceDef(modelName)
+        relPath = path #self.layout.getRelPath(path) , test show bug in hfss 202510216
         
-        sp = Subckt(path)
-        pinNames = self.ShortPinNames
-        nodes = []
-        if len(sp.nodes) != len(pinNames):
-            log.exception("pin count not match with subckt node.")
-        
-        for i in range(len(sp.nodes)):
-            nodes.append("%s:="%sp.nodes[i])
-            nodes.append(pinNames[i])
+        if not pinMap:
+            nodes = None
+            pinNames = None
+        else:
+            splits = pinMap.split(":")
+            if len(splits) == 1:
+                #only nodes given
+                nodes = [s.strip() for s in splits[0].split()]
+                pinNames = None
+            elif len(splits) > 1:
+                nodes = [s.strip() for s in splits[0].split()]
+                pinNames = [s.strip() for s in splits[1].split()]
+            else:
+                log.error("Invalid pinMap %s"%pinMap)
+        sp = SpiceModel(path)
+        ckt = sp.subckts[0]
+        if not nodes:
+            nodes = ckt.nodes
+        if not pinNames:
+            pinNames = self.ShortPinNames
+
+#         if len(nodes) != len(pinNames):
+#             log.exception("pin count not match with subckt node.")
+
+        #---add model
+#         self.layout.modelDefs.addSpiceModel(relPath,name=modelName) #no need, will cause error
+        self.changePartType(type="Capacitor")
+
+    
+        nodeArray = []
+        for i in range(len(nodes)):
+            nodeArray.append("%s:="%nodes[i])
+            nodeArray.append(pinNames[i])
 
         self.layout.oEditor.UpdateModels(
             [
@@ -317,18 +414,21 @@ class Component(Primitive):
                     ],
                     "Prop:=", ["CompPropEnabled:=", True,"Pid:=", -1,"Pmo:=", "0","CompPropType:=", 0,
                         "PinPairRLC:=", ["RLCModelType:=", 4,"SPICE_file_path:=", relPath,
-                        "SPICE_model_name:=", modelName,"SPICE_subckt:=", sp.name,"terminal_pin_map:=", nodes]]
+                        "SPICE_model_name:=", modelName,"SPICE_subckt:=", ckt.name,"terminal_pin_map:=", nodeArray]]
                 ]
             ])
             
-    def addModel(self,path=None,R=None,L=None,C=None,parallel=False):
+    def addModel(self,path=None,R=None,L=None,C=None,parallel=False,pinMap=None):
+        '''
+        pinMap:"1,2,3,4:1,2,3,4"
+        '''
         
         if path:
             snp = path.split(".")[-1]
             if re.match(r"s\d+p", snp,re.IGNORECASE):
-                self.addSnpModel(path)
+                self.addSnpModel(path,pinMap)
             else:
-                self.addSpiceModel(path)
+                self.addSpiceModel(path,pinMap)
         elif R or L or C:
             self.addRLCModel(R=R,L=L,C=C,parallel=parallel)
         else:
@@ -346,9 +446,22 @@ class Component(Primitive):
             log.error("RLC Model only support two pins RLC Component: %s have %s pins, will skip."%(self.name,len(self.PinNames)))
             return
         
-        if self.PartType not in ["Resistor","Inductor","Capacitor"]:
-            log.error("RLC Model only support RLC Part Type: %s Part type is %s, will skip."%(self.name,len(self.PartType)))
+#         if self.PartType not in ["Resistor","Inductor","Capacitors","Resistors","Inductors","Capacitors"]:
+#             log.error("RLC Model only support RLC Part Type: %s Part type is %s, will skip."%(self.name,self.PartType))
+#             return
+        partType = self.PartType
+        CompType = -1
+        if partType.startswith("Res"):
+            CompType = 1
+        elif partType.startswith("Ind"):
+            CompType = 2
+        elif partType.startswith("Cap"):
+            CompType = 3
+        else:
+            log.error("RLC Model only support RLC Part Type: %s Part type is %s, will skip."%(self.name,self.PartType))
             return
+            
+            
                     
         self.layout.oEditor.ChangeProperty(
             [
@@ -379,7 +492,7 @@ class Component(Primitive):
                                      "p:=", parallel,                                        
                                      #"lyr:=", layerNum
                                     ]]]],
-                                "CompType:="        , ["Resistor","Inductor","Capacitor"].index(self.PartType)+1
+                                "CompType:=" , CompType
                             ]
                         ]
                     ]
@@ -422,47 +535,27 @@ class Component(Primitive):
             ])
         
 
-    def createPortOnNets(self,nets):
-        '''
-        create port on each pin of nets.
-        '''
-        if isinstance(nets, str):
-            nets = [nets]
-            
-        self.layout.oEditor.CreatePortsOnComponentsByNet(
-            ["NAME:Components",self.name],["NAME:Nets"]+nets, "Port", "0", "0", "0")
+
     
-    def createPinGroup(self,groupName,pins):
+    def createPinGroup(self,pinNames = None, net = None,groupName = None):
         '''
         pins(list)
         '''
-        self.layout.oEditor.CreatePinGroups(
-            [
-                "NAME:PinGroupDatas",
-                [
-                    "NAME:%s"%groupName, 
-                ] + pins
-            ])
-        
+        if not pinNames: 
+            if net:
+                pinNames = [p.Name for p in self.Pins if p.Net.lower() == net.lower()]
+            else:
+                log.exception("pinNames or net can't be None")
+        return self.layout.PinGroups.createByPins(pinList=pinNames,compName=self.name,groupName = groupName)
+    
+    def createGridPinGroup(self,pinNames=None,nets=None,groupName = None,rows = 1,cols = 1):
+        return self.layout.PinGroups.createByGrid(pinNames,self.name,nets=nets,groupName = groupName,rows = rows,cols = cols)
+
     def deletePinGroup(self,groupName):
         self.layout.oEditor.Delete([groupName])
-        
-        
-    def createPinGroupByNet(self,groupName,net):
-        '''
-        pins(list)
-        '''
-        pins = [p.Name for p in self.Pins if p.Net == net]
-        
-        self.layout.oEditor.CreatePinGroups(
-            [
-                "NAME:PinGroupDatas",
-                [
-                    "NAME:%s"%groupName, 
-                ] + pins
-            ])
-        
-    
+        self.layout.PinGroups.pop(groupName)
+
+
     def createPinGroupPort(self,posGroup,refGroup,portZ0 = "0.1ohm"):
         '''
         posGroup is port Name
@@ -484,14 +577,25 @@ class Component(Primitive):
         self.layout.oEditor.AddPinGroupRefPort([posGroup], [refGroup])
         return posGroup
 
-
-    def createPinGroupPortOnNets(self,posNet,refNet,portZ0 = "0.1ohm"):
+    def createPinGroupPortByNet(self,posNet,refNet,portZ0 = "0.1ohm"):
         '''
         Port_posNet is port Name
         '''
-        posGroup = self.createPinGroupByNet("Port_%s"%posNet, posNet)
-        refGroup = self.createPinGroupByNet("Port_%s"%refNet, refNet)
+        posGroup = self.createPinGroupOnNet(posNet,"Port_%s"%posNet)
+        refGroup = self.createPinGroupOnNet(refNet,"Port_%s"%refNet)
         return self.createPinGroupPort(posGroup, refGroup, portZ0)
+
+    def createPortOnNets(self,nets):
+        '''
+        create port on each pin of nets.
+        '''
+        if isinstance(nets, str):
+            nets = [nets]
+            
+        self.layout.oEditor.CreatePortsOnComponentsByNet(
+            ["NAME:Components",self.name],["NAME:Nets"]+nets, "Port", "0", "0", "0")
+        
+        self.layout.Ports.refresh()
 
     def removeAllPorts(self):
         self.layout.oEditor.RemovePortsOnComponents(
@@ -499,6 +603,7 @@ class Component(Primitive):
                 "NAME:elements", 
                 self.Name
             ])
+        self.layout.Ports.refresh()
     
     def exportPloc(self,path=None):
         #41963 -0.980560 3.153650 CHIP_LAYER VSS CCD_U0_CCD_VSS_41963
@@ -521,7 +626,13 @@ class Component(Primitive):
         with open(path,"w") as f:
             f.write(txts)
             f.close()
+        return path
             
+    def hasPin(self,pinName):
+        for pin in self.PinNames:
+            if pin.lower() == pinName.lower():
+                return True
+        return False
     
     def dissolve(self):
         self.layout.oEditor.DissolveComponents(["NAME:elements",self.Name])
@@ -538,33 +649,30 @@ class Components(Primitives):
     
     def __init__(self,layout=None):
         super(self.__class__,self).__init__(layout, type="component",primitiveClass=Component)
-    
-#     def updateModels(self,modelList):
-#         '''
-#         Args:
-#             modelList(list): information of component in BOM
-#        - {Name: R1, Part: RES_0402_100ohm, Type: Resistor, Model: filepath, RLC: [R,L,C]}
-# 
-#         '''
-#         Name = modelList['Name']
-#         RLC = modelList['RLC']
-#         Part = modelList['Part']
-#         filepath = modelList['Model']
-#         
-#         if filepath:
-#             fileType = os.path.splitext(file)[-1]
-#             if fileType in ['.lib','.sp','.inc']:
-#                 #addSpiceModel
-#                 self.addSpiceModelforCom(Name,Part,filepath)
-#         elif RLC:
-#             #changeRLCValue
-#             self.changeRLCValue(Name,RLC)
-#         else:
-#             pass
+
         
-    def importBOM(self,csvfile):
+    def importBOM(self,csvPath):
         pass
     
+    
+    def exportBom(self,csvPath=None):
+        
+        if not csvPath:
+            csvPath = self.layout.ProjectPath + ".csv"
+        
+        partDict = {}
+        for comp in self.All:
+            part = comp.PartName
+            if part not in partDict:
+                partDict[part] = {"RefDes":[comp.Name],"Part":part,"PartType":comp.ComponentType,"FileName":""}
+            else:
+                partDict[part]["RefDes"].append(comp.Name)
+        
+        for key in partDict:
+            partDict[key]["RefDes"] = ",".join(partDict[key]["RefDes"])
+        
+        writeCSV(csvPath, datas = list(partDict.values()), header = ["RefDes","Part","PartType","FileName"],fmt = 'dict')
+        
     
     def getComponentsByPart(self,part):
         '''
@@ -578,10 +686,10 @@ class Components(Primitives):
         '''
         comps = []
         try:
-            comps = [c for c in self.ComponentDict if re.match(part,c.Part,re.IGNORECASE)]
+            comps = [c for c in self.All if re.match(part,c.Part,re.IGNORECASE)]
         except:
             log.debug("getComponentsByPart regex error: %s,try to get use string compare"%part)
-            comps = [c for c in self.ComponentDict if c.Part.lower() == part.lower()]
+            comps = [c for c in self.All if c.Part.lower() == part.lower()]
 
         return comps
     
@@ -592,31 +700,47 @@ class Components(Primitives):
         '''
         delComps = []
         for comp in self:
-            if comp.PartType in ["Capacitor","Inductor","Resistor"] and len(comp.netnames)<2:
+            if comp.PartType in ["Capacitor","Inductor","Resistor"] and len(comp.NetNames)<2:
                 log.info("Remove invalid RLC: %s, Pin Count %s"%(comp.Name,len(comp.PinNames)))
                 #comp.delete()
                 log.debug("delete invalid RLC: %s"%comp.Name)
                 delComps.append(comp.Name)
-            
+        
+        if not delComps:
+            return
+        
+        log.info("Delete Components: %s"%(",".join(delComps)))
         self.layout.oEditor.DissolveComponents(delComps)
         self.refresh()
         
-    def deleteInvalidComponents(self,ConnectedNetsLessThen = 1):
+    def deleteInvalidComponents(self,ConnectedNetsLessThen= 2,PinsLessThen=2):
         '''
         if component have only 1 pin, will delete
         '''
+        
+        if not ConnectedNetsLessThen and not PinsLessThen:
+            return
+        
+        if ConnectedNetsLessThen<1 and PinsLessThen<1:
+            return
+        
         delComps = []
-        for comp in self:
-            if len(comp.netnames)<=ConnectedNetsLessThen:
-                log.info("Remove invalid Component: %s, Net Count %s"%(comp.Name,len(comp.netnames)))
-                #comp.delete()
-#                 log.debug("delete invalid RLC: %s"%comp.Name)
+        for comp in self.All:
+            if ConnectedNetsLessThen and len(comp.NetNames)<ConnectedNetsLessThen:
+                log.info("Remove invalid Component: %s, pin Count %s"%(comp.Name,len(comp.NetNames)))
                 delComps.append(comp.Name)
+                continue
+                
+            if PinsLessThen and comp.PinCount<PinsLessThen:
+                log.info("Remove invalid Component: %s, pin Count %s"%(comp.Name,comp.PinCount))
+                delComps.append(comp.Name)
+                continue
                 
         if not delComps:
             return
         
 #         self.layout.oEditor.DissolveComponents(delComps)
+        log.info("Delete Components: %s"%(",".join(delComps)))
         self.layout.oEditor.Delete(delComps) #oEditor.Delete(["R440", "R442", "R443"])
         self.refresh()
         
@@ -664,28 +788,65 @@ class Components(Primitives):
         
     
     def updateModels(self,models):
+        '''
+        RefDes和part均支持regex
+        '''
+        
         #[{"RefDes":"","Part":"cap1","PartType":"Capacitor","FileName":null,"R":null,"L":null,"C":null,"Library":null}]
         
-        #---model by Part
-        modelComponents = [m["RefDes"] for m in models]
-        flagByPart = True
-        for each in modelComponents:
-            if each:
-                flagByPart = False
-        
-        models2 = []
-        if flagByPart:
-            for each in models:
-                model = ComplexDict(each)
-                for c in self.getComponentsByPart(model.Part):
+        modelList = []
+        tempList = []
+        for model in models:
+            if not ( model["FileName"].strip() or model["R"].strip() or model["C"].strip() or model["L"].strip()):
+                #if no model file, no R, no C, no L, will skip
+                continue
+
+            if model["RefDes"].strip(): 
+                #if Refdes hass value, will add model
+                
+                comps = []
+                refs = re.split("[\s,;]+",model["RefDes"])
+                
+                #support regex
+                for ref in refs:
+                    tempComps = self.filterName(ref)
+                    if tempComps:
+                        comps += tempComps
+                
+                for ref in comps:
+                    if not ref:
+                        continue
+                    if ref in tempList:
+                        continue
+
                     model2 = model.copy()
-                    model2.RefDes = c.name
-                    models2.append(model2)
-            models = models2                            
-        
+                    model2["RefDes"] = ref
+                    tempList.append(ref)
+                    modelList.append(model2)
+            elif model["Part"].strip():
+                for ref in self.getComponentsByPart(model["Part"]):
+                    refName = ref.Name
+                    if refName in tempList:
+                        continue
+                    model2 = model.copy()
+                    model2["RefDes"] = refName
+                    tempList.append(refName)
+                    modelList.append(model2)
+            else:
+                log.warning("Component model has no RefDes or Part, will skip")                         
+
         #---model by refdes
-        bar = ProgressBar(len(models),"Add component models:")
-        for each in models:
+        modelList2 = []
+        for each in modelList:
+            model = ComplexDict(each)
+            refdes = model.Refdes
+            if refdes not in self.NameList:
+                log.info("Component %s not in layout, skip."%refdes)
+                continue
+            modelList2.append(each)
+        
+        bar = ProgressBar(len(modelList2),"Add component models:")
+        for each in modelList2:
             bar.showPercent()
             #{"RefDes":"","Part":"cap1","PartType":"Capacitor","FileName":null,"R":null,"L":null,"C":null,"Library":null}
             #RefDes,Part,PartType,FileName,Library,R,L,C
@@ -693,21 +854,26 @@ class Components(Primitives):
             model = ComplexDict(each)
             refdes = model.Refdes
             
-            if refdes not in self:
-                log.info("Component %s not in layout, skip."%refdes)
-                continue
+#             if refdes not in self.NameList:
+#                 log.info("Component %s not in layout, skip."%refdes)
+#                 continue
             
             comp = self[refdes]
             #change part type
-            if model.PartType.lower() != comp.PartType.lower():
+            if model.PartType.lower() not in comp.PartType.lower():
                 comp.changePartType(model.PartType)
             
             if model.FileName:
                 if not os.path.isabs(model.FileName):
-                    model.FileName = os.path.join(self.layout.ProjectDir,"Model",model.FileName)
+                    if os.path.exists(os.path.join(self.layout.ProjectDir,model.FileName)):
+                        model.FileName = os.path.abspath(os.path.join(self.layout.ProjectDir,model.FileName))
+                    elif os.path.exists(os.path.join(self.layout.ProjectDir,"Model",model.FileName)):
+                        model.FileName = os.path.abspath(os.path.join(self.layout.ProjectDir,"Model",model.FileName))
+                    else:
+                        log.warning("Model not found: %s"%model.FileName)
                 comp.addModel(model.FileName)
                 
-            elif model.Library:
+            elif "Library" in model and model.Library:
                 splits = re.split(r"[;,]", model.Library)
                 if len(splits) == 1:
                     comp.addLibraryModel(path = splits[0])
@@ -724,3 +890,9 @@ class Components(Primitives):
                 log.info("model error: %s"%str(model))
         
         bar.stop()
+
+    def findComponentByPin(self,pinName):
+        for component in self.All:
+            if component.hasPin(pinName):
+                return component
+        return None

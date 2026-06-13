@@ -1,0 +1,38 @@
+#
+msgid ""
+msgstr ""
+
+msgid "RenameEdgePort"
+msgstr ""
+
+msgid "Port->RenameEdgePort"
+msgstr ""
+
+msgid "对3D Layout里面手动添加的Port进行重命名，方便识别。"
+msgstr ""
+
+msgid "命名规则："
+msgstr ""
+
+msgid "如果Port位置Pin上，则以 refdes.pin.Net方式命名，比如 U1.A2.DQ0"
+msgstr ""
+
+msgid "如果Port位置不在Pin上，则以网络名称进行命名"
+msgstr ""
+
+msgid ""
+"手动添加Port后，保持3D Layout窗口在最前面，运行Port->RenameEdgePort命令，Port会自动更新。 ![Alt "
+"text](images/image%5B1%5D.png)"
+msgstr ""
+
+msgid "命名前"
+msgstr ""
+
+msgid "![](images/2024-05-07-21-24-18%5B1%5D.png)"
+msgstr ""
+
+msgid "命名后："
+msgstr ""
+
+msgid "![Alt text](images/image-1.png)"
+msgstr ""

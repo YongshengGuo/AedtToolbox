@@ -1,37 +1,23 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230410
 
 
 import os,sys,re
+import importlib
 import shutil
 import time
 
 # import clr
-import os,sys,re
 from .common.common import log
 
-#---library
-from .definition.padStack import PadStacks
-from .definition.componentLib import ComponentDefs
-from .definition.material import Materials
-#---natural
-from .definition.setup import Setups
-from .definition.variable import Variables
-from .postData.solution import Solutions
 
-from .common.complexDict import ComplexDict
-from .common.arrayStruct import ArrayStruct
-
-from .layoutOptions import options
+# from .options import options
 
 #log is a globle variable
 from .common import common
 from .common.common import *
-# from .common.common import log,isIronpython
-from .common.unit import Unit
 
-from .common.common import DisableAutoSave,ProcessTime
 
 
 '''初始化oDesktop对象
@@ -70,19 +56,19 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
     
     aedtInstallDir = None
     #set installDir
-    if oDesktop:
-        aedtInstallDir = oDesktop.GetExeDir()
-    elif installDir != None:
-        aedtInstallDir = installDir.strip("/").strip("\\")
+    # if oDesktop:
+    #     aedtInstallDir = oDesktop.GetExeDir()
+    if installDir:
+        aedtInstallDir = os.path.abspath(installDir) #installDir.strip("/").strip("\\")
+        if not os.path.exists(aedtInstallDir):
+            log.exception("AEDT Install Path not found: %s"%aedtInstallDir)
+        
+#         print("AEDT InstallDir: %s"%aedtInstallDir)
     else:
         #environ ANSYSEM_ROOTxxx, set installDir from version
         
-
         verEnv = None
-        if installDir:
-            aedtInstallDir = installDir
-        
-        elif version:
+        if version:
             ver = version.replace(".", "")[-3:]
             verEnv = "ANSYSEM_ROOT%s" % ver
             
@@ -90,8 +76,8 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
                 aedtInstallDir = os.environ[verEnv] 
         
         if aedtInstallDir:
-            pass
-        elif "ANSYSEM_ROOT" in os.environ:
+            os.environ["ANSYSEM_ROOT"] = aedtInstallDir
+        elif "ANSYSEM_ROOT" in os.environ and os.environ["ANSYSEM_ROOT"].strip():
             aedtInstallDir = os.environ["ANSYSEM_ROOT"]
         else:
             ANSYSEM_ROOTs = list(
@@ -101,49 +87,83 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
                 ANSYSEM_ROOTs.sort(key=lambda x: x[-3:])
                 aedtInstallDir = os.environ[ANSYSEM_ROOTs[-1]]
          
-        if aedtInstallDir: 
-            sys.path.insert(0,aedtInstallDir)
-            sys.path.insert(0,os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin'))
-        else:
-            log.exception("please set environ ANSYSEM_ROOT=Ansys EM install path...")
-        
-#     sys.path.insert(0,aedtInstallDir)
-#     sys.path.insert(0,os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin'))
+    if aedtInstallDir: 
+        print("AEDT InstallDir: %s"%aedtInstallDir)
+    else:
+        log.exception("please set environ ANSYSEM_ROOT=Ansys EM install path...")
     
+    
+    sys.path.insert(0,aedtInstallDir)
+    sys.path.insert(0,os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin'))
+    
+#     #path for UDM,UDP
+#     sys.path.insert(0,os.path.join(aedtInstallDir,r"syslib\UserDefinedModels\Lib"))
+#     sys.path.insert(0,os.path.join(aedtInstallDir,r"PythonFiles\Geometry3DPlugin"))
+#     sys.path.insert(0,os.path.join(aedtInstallDir,r"syslib\ACT\ATKDesign\Lib\UDMScript"))
+#     #clr.AddReference("Ansys.Ansoft.Geometry3DPluginDotNet")
+# 
+    os.environ["ANSYS_OADIR"] = os.path.join(aedtInstallDir,'common','oa')
+    os.environ["DesktopPluginPyAEDT"] = os.path.join(aedtInstallDir,'PythonFiles','DesktopPlugin')
+    if aedtInstallDir not in os.environ["PATH"].split(os.pathsep):
+        os.environ["PATH"] = aedtInstallDir + os.pathsep + os.environ["PATH"] 
+    
+    #for linux edpapp
+    if is_linux:
+        ld_library_path = os.environ.get("LD_LIBRARY_PATH", "")
+        os.environ["LD_LIBRARY_PATH"] = os.pathsep.join([
+            os.path.join(aedtInstallDir,r"common/mono/Linux64/lib64"),
+            os.path.join(aedtInstallDir,r"Delcross"),ld_library_path])
     
     # set version from aedtInstallDir
-    if version == None:
+    if not version:
         ver1 = re.split(r"[\\/]+", aedtInstallDir)[-2]
         ver2 = ver1.replace(".", "")[-3:]
         version = "Ansoft.ElectronicsDesktop.20%s.%s" % (ver2[0:2],ver2[2])
     else:
-        pass
+        if "Ansoft.ElectronicsDesktop" not in version:
+            version = "Ansoft.ElectronicsDesktop." + version
     
     #for python
     if not isIronpython:
         #only for nonGraphical or newDesktop = true
         if nonGraphical or newDesktop or is_linux:
+            desktop_plugin = None
             try:
                 #only for version last then 2024R1
-                log.info("load PyDesktopPlugin")
-                import PyDesktopPlugin  # @UnresolvedImport
-                oAnsoftApp = PyDesktopPlugin.CreateAedtApplication(NGmode=nonGraphical,alwaysNew = newDesktop)
+                log.info("load PyDesktopPlugin:%s"%(os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin')))
+                desktop_plugin = importlib.import_module("PyDesktopPlugin")
+            except Exception:
+                log.info("Not load PyDesktopPlugin in path:%s"%os.path.join(aedtInstallDir, 'PythonFiles', 'DesktopPlugin'))
+
+            
+            try:
+                if desktop_plugin is None:
+                    raise ImportError("PyDesktopPlugin unavailable")
+                oAnsoftApp = desktop_plugin.CreateAedtApplication(NGmode=nonGraphical,alwaysNew = newDesktop)
                 oDesktop = oAnsoftApp.GetAppDesktop()
-            except:
+            except Exception:
                 log.info("PyDesktopPlugin not load, it's only for version last then 2024R1")
                 oDesktop = None
         else: 
             try:
                 #for python
-                log.info("Intial AEDT from python win32com")
+                log.info("Intial AEDT from python win32com, AEDT Version: %s"%version)
+                
+                #Aedt Version: Ansoft.ElectronicsDesktop.2025.1.0, remove .0  #20250605
+                splits = version.split(".")
+                if len(splits)>4:
+                    version = ".".join(splits[:4])
+                
                 import win32com.client  # @UnresolvedImport
                 oAnsoftApp = win32com.client.Dispatch(version)
                 oDesktop = oAnsoftApp.GetAppDesktop()
-            except:
-                    log.info("Intial AEDT from python win32com fail")
+            except Exception:
+                    log.info("Intial AEDT from python win32com fail, AEDT Version: %s"%version)
                     oDesktop = None
  
-    if oDesktop != None:
+    if oDesktop is not None:
+        #do not set oDesktop to main modules, AEDT has a chance of crashing under certain circumstances.  
+        Module._oDesktop = oDesktop
         return oDesktop
     
     
@@ -155,9 +175,12 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
     
             if is_linux:
                 try:
-                    from ansys.aedt.core.generic.clr_module import _clr # @UnresolvedImport
-                except:
-                    log.exception("pyaedt must be install on linux: pip install pyaedt")
+                    clr_module = importlib.import_module("ansys.aedt.core.generic.clr_module")
+                    _clr = clr_module._clr
+                except Exception:
+                    log.info("Make sure pyaedt have installed on linux: pip install pyaedt")
+                    clr_module = importlib.import_module("ansys.aedt.core.internal.clr_module")
+                    _clr = clr_module._clr
             else:
                 #for windows
                 import clr as _clr # @UnresolvedImport
@@ -180,17 +203,20 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
                   
             oDesktop = oAnsoftApp.GetAppDesktop()
             
-        except:
+        except Exception:
             log.debug("Intial AEDT from clr fail.")
             oDesktop = None
         
         
-    if oDesktop != None:
+    if oDesktop is not None:
+        Module.oDesktop = oDesktop
         return oDesktop
         
             
-    if oDesktop == None:
+    if oDesktop is None:
         raise ValueError("initialize Desktop fail")
+    
+    Module.oDesktop = oDesktop
     return oDesktop
 
 
@@ -205,6 +231,7 @@ def _delete_objects():
         del module.oDesktop
     except AttributeError:
         pass
+    
     try:
         del module.pyaedt_initialized
     except AttributeError:
@@ -231,7 +258,7 @@ def _delete_objects():
         pass
     try:
         del sys.modules["glob"]
-    except:
+    except Exception:
         pass
     
     import gc
@@ -246,5 +273,5 @@ def releaseDesktop():
     try:
         _delete_objects()
         return True
-    except:
+    except Exception:
         return False

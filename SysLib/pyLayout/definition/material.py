@@ -1,6 +1,10 @@
 #--- coding=utf-8
-#--- @Author: Yongsheng.Guo@ansys.com, Henry.he@ansys.com,Yang.zhao@ansys.com
+#--- @Author: Yongsheng.Guo@ansys.com
 #--- @Time: 20230410
+
+import re
+import math
+
 
 from ..common import hfss3DLParameters
 from ..common.arrayStruct import ArrayStruct
@@ -9,7 +13,6 @@ from ..common.unit import Unit
 from ..common.common import log,tuple2list
 from .definition import Definitions,Definition
 
-import math
 
 
 class Material(Definition):
@@ -27,21 +30,19 @@ class Material(Definition):
     'specific_heat:=', '0']
     '''
     
-    layoutTemp = None
-    
-    maps = {
-        "DK":"permittivity",
-        "DF":"dielectric_loss_tangent",
-        "Cond":"conductivity",
-        "Resistivity":{"Key":"conductivity","Get": lambda x:1/float(x),"Set": lambda x:str(1.0/x)},
-        "k":"thermal_conductivity",
-        "ur": "permeability"
-        
-        }
-    
+
+
 
     def __init__(self, name = None,array = None,layout = None):
         super(self.__class__,self).__init__(name,type="Material",layout=layout)
+        self.maps = {
+            "DK":"permittivity",
+            "DF":"dielectric_loss_tangent",
+            "Cond":"conductivity",
+            "Resistivity":{"Key":"conductivity","Get": lambda x:1/float(x),"Set": lambda x:str(1.0/x)},
+            "k":"thermal_conductivity",
+            "ur": "permeability"
+            }
 
 
     def parse(self,force = False):
@@ -53,7 +54,7 @@ class Material(Definition):
             return
         
         log.debug("parse definition: %s"%self.name)
-        maps = self.maps.copy()
+        maps = self.maps
         
         datas = self.oManager.GetData(self.name)
         if datas:
@@ -98,13 +99,18 @@ class Material(Definition):
         
         if material not exist, will add, else will edit
         '''
-        #oDefinitionManager.AddMaterial(["NAME:Material1",["NAME:PhysicsTypes","set:=", ["Electromagnetic","Thermal","Structural"]]])
+        #oDefinitionManager.AddMaterial(["NAME:Material1",["NAME:PhysicsArrayTypes","set:=", ["Electromagnetic","Thermal","Structural"]]])
         
         if self.oDefinitionManager.DoesMaterialExist(self.name):
             self.oDefinitionManager.EditMaterial(self.name,self.Array.Datas)
         else:
             self.oDefinitionManager.AddMaterial(self.Array.Datas)
             
+    def delete(self):
+        oDefinitionManager = self.oProject.GetDefinitionManager()
+        oDefinitionManager.RemoveMaterial(self.name, True, "", "Project")
+        self.layout.Materials.refresh()
+
 
     def isConductor(self,threshed=10000):
         
@@ -151,24 +157,6 @@ class Materials(Definitions):
         
         return bool(self.getByName(key))
 
-
-#     @property
-#     def DefinitionDict(self):
-#         if self._definitionDict == None:
-#             log.warning("Materials collection only has material in project, material in SysLibrary will not include in Materials collection. \
-#                 But you can use Material(name) or getByName(name) to get the Material object in SysLibrary")
-#             oManager = self.oDefinitionManager.GetManager("Material")
-#             self._definitionDict = ComplexDict(dict([(name,Material(name,layout=self.layout)) for name in oManager.GetNames()]))
-#         return self._definitionDict
-    
-#     @property
-#     def DefinitionDict(self):
-#         if self._definitionDict == None:
-#             oDefinitionManager = self.layout.oProject.GetDefinitionManager()
-#             oManager = oDefinitionManager.GetManager(self.type)
-#             self._definitionDict  = ComplexDict(dict([(name,self.definitionCalss(name,layout=self.layout)) for name in oManager.GetNames()]))
-#         return self._definitionDict
-    
             
     def create(self,infoDict={},name=None,**kwargs):
         '''
@@ -178,7 +166,7 @@ class Materials(Definitions):
         '''
         ops = ComplexDict(infoDict)
         ops.updates(kwargs)
-        ary = ArrayStruct(tuple2list(hfss3DLParameters.material),maps=Material.maps).copy()
+        ary = ArrayStruct(tuple2list(hfss3DLParameters.material),maps=Material().maps).copy()
         
         if name:
 #             name = name
@@ -189,8 +177,9 @@ class Materials(Definitions):
             name = ops["Name"]
             ary.Array[0] = 'NAME:%s'%name
         
-        if "Name" in ops:
-            del ops["Name"]
+        for item in ["Name","Freq"]:
+            if item in ops:
+                del ops[item]
             
         for k in ops.Keys:
             if k in ary:
@@ -204,15 +193,56 @@ class Materials(Definitions):
         return material
             
             
-    def add(self,infoDict={},name=None,**kwargs):
+    def add(self,name=None,infoDict={},**kwargs):
         '''
-        info(dict): {name:copper,....}
+        info(dict): {name:copper,...., Freq:xxxx}
         if material not exist, will add, else will edit
         '''
-        material = self.create(infoDict,name,**kwargs)
-        material.update()
-        self.push(material.name)
-        return material
+
+        #兼容设计
+        if isinstance(name,(dict,ComplexDict)) and not infoDict:
+            infoDict = ComplexDict(name)
+            name = infoDict["Name"]
+        
+        ops = ComplexDict(infoDict)
+        ops.updates(kwargs)
+        if "Freq" in ops and ops.Freq:
+            #Frequency-independent material
+            dks = re.split(r"\s*[;,]+\s*",ops.DK)
+            freqs = re.split(r"\s*[;,]+\s*",ops.Freq)
+            dk = dks[0]
+            df = ops.DF
+            if len(freqs) == 1:
+                f1 = freqs[0]
+                f2 = 10**12/(2*math.pi)
+            elif len(freqs) == 2:
+                f1 = freqs[0]
+                f2 = freqs[1]
+            else:
+                log.exception("Material %s Frequencies set error:%s."%(name,ops.Freq))
+
+            #---DS-Model
+            if len(dks) == 1:
+                #hfss DS-Model
+                if "_ds" not in ops.Name[-3:].lower():
+                    name = ops.Name + "_DS_%s"%("_".join(freqs))
+                else:
+                    name = ops.Name
+                return self.addHFSSDSModle(name,dk,df,f1=f1,fB=f2)
+            elif len(dks) == 2:
+                #stander DS-Model
+                if "_ds" not in ops.Name[-3:].lower():
+                    name = "%s_DS_%s"%("_".join(dks),"_".join(freqs))
+                else:
+                    name = ops.Name
+                return self.addStdDSModel(name,dks[0],dks[1],fA=f1,fB=f2)
+            else:
+                log.exception("Material %s DK set error:%s."%(name,ops.DK))
+        else:
+            material = self.create(infoDict,name,**kwargs)
+            material.update()
+            self.push(material.name)
+            return material
         
     def addHFSSDSModle(self,name,dk=4,df=0.02,f1=1e9,cond_dc=1e-12,fB=10**12/(2*math.pi)):
         '''
@@ -221,8 +251,14 @@ class Materials(Definitions):
         fB default 10^12/(2*pi)
         '''
         # K = f"({dk} * {df} - {cond_dc} / (2 * pi * {freqA} * e0)) / atan({freqB} / {freqA})"
+        dk = Unit(dk).V
+        df = Unit(df).V
+        f1 = Unit(f1).V
+        fB = Unit(fB).V
+        cond_dc = Unit(cond_dc).V
         w1 = 2*math.pi*f1
         wB = 2*math.pi*fB
+        
         e0 = 8.854187817e-12  
         
         K = (dk*df-cond_dc/(w1*e0))/math.atan(wB/w1)
@@ -236,17 +272,32 @@ class Materials(Definitions):
                  "fB:%s "%fB
                  )
         
-        e_freq = "{e_infi}+{K}/2*ln(({fB}**2+freq**2)/({fA}**2+freq**2))".format(e_infi=e_infi,K=K,fB=fB,fA=fA)
-        cond_freq = "{cond_dc}+2*pi*freq*e0*{K}*(atan(freq/{fA})-atan(freq/{fB}))".format(cond_dc=cond_dc,K=K,fB=fB,fA=fA)
+        # e_freq = "{e_infi}+{K}/2*ln(({fB}**2+Freq*Freq)/({fA}**2+Freq*Freq))".format(e_infi=e_infi,K=K,fB=fB,fA=fA)
+        # cond_freq = "{cond_dc}+2*pi*Freq*e0*{K}*(atan(Freq/{fA})-atan(Freq/{fB}))".format(cond_dc=cond_dc,K=K,fB=fB,fA=fA)
+        
+        # log.info("Djordjevic-Sarkar Model Parameter:\n",
+        #          "DK:%s\n"%e_freq,
+        #          "Conductivity:%s"%cond_freq
+        #          )
+        
+        #兼容Siwave 20260521 （测试不成功）
+        epsilon_0 = 8.8541878128e-12
+        e_freq = "{e_infi:.5f}+{Kd2:.8f}*ln(({fBp2:.5e}+Freq*Freq)/({fAp2:.5e}+Freq*Freq))".format(e_infi=e_infi,Kd2=K/2,fBp2=fB**2,fAp2=fA**2)
+        cond_freq = "{cond_dc}+{Kx:.5e}*Freq*(atan(Freq/{fA:.1f})-atan(Freq/{fB:.5e}))".format(cond_dc=cond_dc,Kx=K*2*math.pi*epsilon_0,fB=fB,fA=fA)
+        
         log.info("Djordjevic-Sarkar Model Parameter:\n",
                  "DK:%s\n"%e_freq,
                  "Conductivity:%s"%cond_freq
                  )
-        self.add({
+
+        material = self.create({
             "Name":name,
             "DK":e_freq,
             "Cond":cond_freq
             })
+        material.update()
+        self.push(material.name)
+        return material
         
     def addHFSSDSModle2(self,name,dk=4,df=0.02,f1=1e9,cond_dc=1e-12,fB=10**12/(2*math.pi)):
         '''
@@ -255,6 +306,11 @@ class Materials(Definitions):
         fB default 10^12/(2*pi)
         '''
         # K = f"({dk} * {df} - {cond_dc} / (2 * pi * {freqA} * e0)) / atan({freqB} / {freqA})"
+        dk = Unit(dk).V
+        df = Unit(df).V
+        f1 = Unit(f1).V
+        fB = Unit(fB).V
+        cond_dc = Unit(cond_dc).V
         w1 = 2*math.pi*f1
         wB = 2*math.pi*fB
         e0 = 8.854187817e-12  
@@ -268,8 +324,11 @@ class Materials(Definitions):
 
 
     def addStdDSModel(self,name,e_infi,e_delta,fA,fB,cond_dc=1e-12):
-        wA = 2*math.pi*fA
-        wB = 2*math.pi*fB
+        e_infi = Unit(e_infi).V
+        e_delta = Unit(e_delta).V
+        cond_dc = Unit(cond_dc).V
+        wA = 2*math.pi*Unit(fA).V
+        wB = 2*math.pi*Unit(fB).V
         e0 = 8.854187817e-12  
         
         log.info("Djordjevic-Sarkar Model Parameter:\n",
@@ -279,7 +338,7 @@ class Materials(Definitions):
                  "fB:%s "%fB
                  )
         
-        cer = "{e_infi}+{e_delta}/ln({wB}/{wA})*ln(({wB}+1j*2*pi*freq)/({wA}+1j*2*pi*freq))+{cond_dc}/(1j*2*pi*freq*e0)".format(
+        cer = "{e_infi}+{e_delta}/ln({wB}/{wA})*ln(({wB}+1j*2*pi*Freq)/({wA}+1j*2*pi*Freq))+{cond_dc}/(1j*2*pi*Freq*e0)".format(
             e_infi=e_infi,e_delta=e_delta,wB=wB,wA=wA,cond_dc=cond_dc
             )
         dk = "re({cer})".format(cer=cer)
@@ -288,12 +347,19 @@ class Materials(Definitions):
                  "DK:%s\n"%dk,
                  "DF:%s"%df
                  )
-        self.add({
+        # self.add({
+        #     "Name":name,
+        #     "DK":dk,
+        #     "DF":df
+        #     })
+        material = self.create({
             "Name":name,
             "DK":dk,
             "DF":df
             })
-        
+        material.update()
+        self.push(material.name)
+        return material
     
     def getByName(self,name):
         '''
@@ -313,7 +379,7 @@ class Materials(Definitions):
         if rst:
             return rst
         else:
-            temp =  Material(name)
+            temp =  Material(name,layout=self.layout)
             if temp.Array.Datas:
                 return temp
             else:

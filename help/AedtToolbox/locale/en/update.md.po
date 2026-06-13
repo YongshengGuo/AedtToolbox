@@ -1,0 +1,29 @@
+#
+msgid ""
+msgstr ""
+
+msgid "update"
+msgstr ""
+
+msgid "获取更新"
+msgstr ""
+
+msgid "AedtToolbox github 下载地址"
+msgstr ""
+
+msgid "https://github.com/YongshengGuo/AedtToolbox/releases/latest"
+msgstr ""
+
+msgid "pyaedt下载离线包"
+msgstr ""
+
+msgid ""
+"工具的运行需要安装pyaedt，如果受限于网络不能通过pip安装，可以从下面的连接下载对应python版本的离线版本： "
+"https://github.com/ansys/pyaedt"
+msgstr ""
+
+msgid "联系作者"
+msgstr ""
+
+msgid "yongsheng.guo@ansys.com"
+msgstr ""

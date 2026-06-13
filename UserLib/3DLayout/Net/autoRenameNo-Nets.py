@@ -24,7 +24,7 @@ from pyLayout import Layout
 def main():
     layout = Layout()
     layout.initDesign()
-    layout.Nets.nameNoNets()    
+    layout.Nets.mergePhysicallyConnectedNets()    
 
 
 if __name__ == '__main__':
