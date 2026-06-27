@@ -36,13 +36,22 @@ def openFile(fileFilter = "All files(*.*)|*.*"):
 
 
 def main():
-    path = openFile("All files(*.*)|*.*")
+    # allegro:.brd,.sip,.mcm, odb++:.zip, IPC2581:.xml, Aedt:.aedt/.aedtz ( .aedb is folder), EDB: edb.def, SIwave: .siw
+    path = openFile(
+        "Layout files (*.brd;*.sip;*.mcm;*.zip;*.xml;*.aedt;*.aedtz;*.def;*.siw)|*.brd;*.sip;*.mcm;*.zip;*.xml;*.aedt;*.aedtz;*.def;*.siw|"
+        "Allegro files (*.brd;*.sip;*.mcm)|*.brd;*.sip;*.mcm|"
+        "ODB++ archives (*.zip)|*.zip|"
+        "IPC2581 files (*.xml)|*.xml|"
+        "AEDT files (*.aedt;*.aedtz)|*.aedt;*.aedtz|"
+        "EDB definition files (*.def)|*.def|"
+        "SIwave files (*.siw)|*.siw|"
+        "All files (*.*)|*.*"
+    )
     if path:
         layout = Layout()
         layout.loadLayout(path)
 
         
-
 if __name__ == '__main__':
 #     test1()
     main()

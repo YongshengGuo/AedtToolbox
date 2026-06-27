@@ -1,5 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Menu>
+	<SubMenu Name="Toolkits">
+	</SubMenu>
+	
 	<SubMenu Name="Import">
 		<SubMenu Type="MenuItem" Name="LoadLayout" ExecuteType="Python" Path="$UserLib/3DLayout/Import/loadLayout.py"/>
 	</SubMenu>
@@ -14,6 +17,7 @@
 	<SubMenu Name="Stackup" DesignType="3DLayout">
 		<SubMenu Type="MenuItem" Name="ImportCSVStackup" ExecuteType="Python" Path="$UserLib/3DLayout/Stackup/importCSVStackup.py" Arguments ="" PythonPath="" EntryFunc="main"></SubMenu>
 		<SubMenu Type="MenuItem" Name="ExportCSVStackup" ExecuteType="Python" Path="$UserLib/3DLayout/Stackup/exportCSVStackup.py" Arguments ="" PythonPath="" EntryFunc="main"></SubMenu>
+		<SubMenu Type="MenuItem" Name="DeleteLayers" ExecuteType="Python" Path="$UserLib/3DLayout/Stackup/deleteLayers.py" Arguments ="" PythonPath="" EntryFunc="main"></SubMenu>
 	</SubMenu>
 	<SubMenu Name="Net" DesignType="3DLayout">
 		<SubMenu Type="MenuItem" Name="AutoXNet" ExecuteType="Python" Path="$UserLib/3DLayout/Net/autoRLCNet.py" Arguments ="" PythonPath=""></SubMenu>
@@ -26,9 +30,6 @@
 	<SubMenu Name="Via" DesignType="3DLayout">
 		<SubMenu Type="MenuItem" Name="autoBackdrill" ExecuteType="IronPython" Path="$UserLib/3DLayout/Via/autoBackdrill.py" Arguments ="" PythonPath=""></SubMenu>
 		<SubMenu Type="MenuItem" Name="keepHDIViaPad" ExecuteType="Python" Path="$UserLib/3DLayout/Via/keepHDIViaPad.py" Arguments ="" PythonPath=""></SubMenu>
-		<SubMenu Type="MenuItem" Name="via_design_wizard" ExecuteType="Python" Path="C:/work/Project/AE/Script/via_design_wizard-0.0.3/src/via_design_wizard.py" Arguments ="" PythonPath=""></SubMenu>
-		<SubMenu Type="MenuItem" Name="添加BrtFrt" ExecuteType="IronPython" Path="C:\work\Study\Script\Ansys\quickAnalyze\Yguo\BrtFrt.py" Arguments ="" PythonPath=""></SubMenu>
-
 	</SubMenu>
 	<SubMenu Name="Port" DesignType="3DLayout">
 		<SubMenu Type="MenuItem" Name="RenameEdgePort" ExecuteType="Python" Path="$UserLib/3DLayout/Port/nameEdgePort.py" Arguments ="" PythonPath=""></SubMenu>
@@ -43,13 +44,11 @@
 		<SubMenu Type="MenuItem" Name="CloseAllProjectNotSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAllProjectWithoutSave"></SubMenu>
 		<SubMenu Type="MenuItem" Name="ReloadProject" ExecuteType="IronPython" Path="$UserLib/Desktop/Close.py" EntryFunc="Reload"></SubMenu>
 	</SubMenu>
-	<SubMenu Name="License">
-		<SubMenu Type="MenuItem" Name="licenseConnectionReset(VPN)" ExecuteType="EXE" Path="$UserLib/App/licenseConnectionReset.bat"></SubMenu>
-	</SubMenu>
 
 	<SubMenu Type="Separator"/>
 	<SubMenu Type="MenuItem" Name="OpenToolboxDir" ExecuteType="Python" Path="$UserLib/Desktop/OpenToolboxDir.py" ></SubMenu>
 	<SubMenu Type="MenuItem" Name="KeepOnTop" ExecuteType="Command" Checked="True"></SubMenu>
+	<SubMenu Type="MenuItem" Name="KeepLogWindow" ExecuteType="Command" Checked="True"></SubMenu>
 	<SubMenu Name="test">
 		<SubMenu Type="MenuItem" Name="showProjectName_python" ExecuteType="Python" Path="$UserLib/Template/showProjectName.py" Arguments ="" PythonPath=""></SubMenu>
 		<SubMenu Type="MenuItem" Name="showProjectName_Ironpython" ExecuteType="IronPython" Path="$UserLib/Template/showProjectName.py" Arguments ="" EntryFunc="main" PythonPath=""></SubMenu>

@@ -375,7 +375,12 @@ class Setup(Definition):
     def exportToHfss(self,path = None,timeout = 10*60):
         if not path:
             path = os.path.join(self.layout.projectDir, "%s_%s.aedt"%(self.layout.projectName,self.layout.designName))
-            
+        
+        #如果存在path则先删除文件        
+        if os.path.exists(path):
+            log.info("File exist, will be removed first: %s"%path)
+            os.remove(path)
+        
         log.info("Export 3D Layout design to HFSS: %s"%path)
         self.oModule.ExportToHfss(self.name, path)
         
@@ -416,8 +421,8 @@ class Setup(Definition):
             
             flag = 1
             #20240821 try all vertex for net
-            for vertex in obj.Vertexs:
-                pt0 = ["%s%s"%(x,unit) for x in  vertex]
+            for vertex in obj.Vertexs.values():
+                pt0 = ["%s%s"%(x,unit) for x in vertex]
                 layer = self.layout.layers.getLayerByHeight(pt0[2])
                 layoutObjs = self.layout.getObjectByPoint([pt0[0],pt0[1]],layer=layer)
                 if layoutObjs:
@@ -452,6 +457,11 @@ class Setup(Definition):
     def exportToQ3D(self,path = None,timeout = 30*60):
         if not path:
             path = os.path.join(self.layout.projectDir, "%s_%s.aedt"%(self.layout.projectName,self.layout.designName))
+            
+        #如果存在path则先删除文件        
+        if os.path.exists(path):
+            log.info("File exist, will be removed first: %s"%path)
+            os.remove(path)
             
         log.info("Export 3D Layout design to Q3D: %s"%path)
         self.oModule.ExportToQ3D (self.name, path)
@@ -496,7 +506,7 @@ class Setup(Definition):
             
             flag = 1
             #20240821 try all vertex for net
-            for vertex in obj.Vertexs:
+            for vertex in obj.Vertexs.values():
                 pt0 = ["%s%s"%(x,unit) for x in  vertex]
                 layer = self.layout.layers.getLayerByHeight(pt0[2])
                 layoutObjs = self.layout.getObjectByPoint([pt0[0],pt0[1]],layer=layer)

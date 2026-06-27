@@ -114,6 +114,7 @@ class Material(Definition):
 
     def isConductor(self,threshed=10000):
         
+        #---判断材料是否为导体，默认阈值为10000S/m
         try:
             if float(self.conductivity) < 10000:
                 return False
@@ -123,6 +124,8 @@ class Material(Definition):
             #conductivity is expression
             log.debug("float(conductivity) error:%s"%self.conductivity)
         
+        #---判断材料是否为导体，默认阈值为10000S/m
+        #---DS-Model or expression, 20260626
         #1e-12+2.84472e-12*Freq*(atan(Freq/70403)-atan(Freq/1.59155e+11))
         try:
             evalValue = self.layout.Variables.evalExpression(self.conductivity)

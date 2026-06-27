@@ -148,55 +148,163 @@ def getActiveDesktop():
         return None
 
 
-def release():
+
+def _releaseComObjects():
+    '''
+    Release all COM object references.
+    This allows other applications to access AEDT without conflicts.
+    The AEDT application itself remains open.
+    '''
     module = sys.modules["__main__"]
     
-    # try:
-    #     pid = module.oDesktop.GetProcessID()
-    #     os.kill(pid, 9)
-    # except AttributeError:
-    #     pass
+    # Release oDesktop COM object
+    released_count = 0
+    try:
+        if hasattr(module, "_oDesktop"):
+            oDesktop = getattr(module, "_oDesktop")
+            if oDesktop:
+                try:
+                    if isIronpython:
+                        # For IronPython: use Marshal.ReleaseComObject
+                        try:
+                            from System.Runtime.InteropServices import Marshal
+                            while Marshal.ReleaseComObject(oDesktop) > 0:
+                                pass
+                            log.info("Released _oDesktop COM object (IronPython)")
+                            released_count += 1
+                        except Exception as e:
+                            log.debug("Marshal.ReleaseComObject not available: %s" % str(e))
+                    else:
+                        # For CPython: just delete the reference
+                        log.info("Released _oDesktop reference")
+                        released_count += 1
+                except Exception as e:
+                    log.warning("Error releasing _oDesktop: %s" % str(e))
+        
+        if hasattr(module, "oDesktop"):
+            oDesktop = getattr(module, "oDesktop")
+            if oDesktop and oDesktop != getattr(module, "_oDesktop", None):
+                try:
+                    if isIronpython:
+                        try:
+                            from System.Runtime.InteropServices import Marshal
+                            while Marshal.ReleaseComObject(oDesktop) > 0:
+                                pass
+                            log.info("Released oDesktop COM object (IronPython)")
+                            released_count += 1
+                        except Exception as e:
+                            log.debug("Marshal.ReleaseComObject not available: %s" % str(e))
+                    else:
+                        log.info("Released oDesktop reference")
+                        released_count += 1
+                except Exception as e:
+                    log.warning("Error releasing oDesktop: %s" % str(e))
+    
+    except Exception as e:
+        log.debug("_releaseComObjects error: %s" % str(e))
+    
+    if released_count > 0:
+        log.info("COM objects released: %d" % released_count)
+    
+    return released_count
 
+
+def _delete_objects():
+    '''
+    Delete all object references from the main module.
+    This should be called after _releaseComObjects() to clean up references.
+    '''
+    module = sys.modules["__main__"]
+    
+    # First release COM objects
+    _releaseComObjects()
+    
+    # Then delete all references
     try:
         del module.COMUtil
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
 
     try:
         del module.oDesktop
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
+    
+    try:
+        del module._oDesktop
+    except (AttributeError, KeyError):
+        pass
+    
     try:
         del module.pyaedt_initialized
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
     try:
         del module.oAnsoftApplication
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
     try:
         del module.desktop
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
     try:
         del module.sDesktopinstallDirectory
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
     try:
         del module.isoutsideDesktop
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
     try:
         del module.AEDTVersion
-    except AttributeError:
+    except (AttributeError, KeyError):
         pass
     try:
         del sys.modules["glob"]
-    except:
+    except Exception:
         pass
     
+    # Force garbage collection
     import gc
     gc.collect()
+
+
+def releaseDesktop():
+    '''
+    Release COM resources and relinquish AEDT window control.
+    
+    This function releases all COM object references held by this Python process,
+    allowing other applications or scripts to access AEDT without conflicts.
+    The AEDT application remains open, and projects/windows are not affected.
+    
+    Returns:
+        bool: True if successfully released, False if exception occurred
+        
+    Note:
+        - AEDT application remains open after calling this function
+        - Only COM references are released
+        - Projects and windows remain open
+        - To fully close AEDT, use Circuit.quitAedt() instead
+    
+    Examples:
+        >>> releaseDesktop()  # Release COM resources
+    '''
+    module = sys.modules['__main__']
+    try:
+        # Release all COM objects and delete references
+        log.info("Releasing COM resources...")
+        _delete_objects()
+        log.info("COM resources released. AEDT window control relinquished.")
+        return True
+        
+    except Exception as e:
+        log.warning("Exception in releaseDesktop: %s" % str(e))
+        try:
+            _delete_objects()
+        except Exception:
+            pass
+        return False
+
 
 if __name__ == "__main__":
     oDesktop = getActiveDesktop()

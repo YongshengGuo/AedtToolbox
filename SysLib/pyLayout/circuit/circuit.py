@@ -99,19 +99,17 @@ class Circuit(object):
         
         
     def __del__(self):
-#         self._oDesktop = None
-#         self._info = None
-#         self._components = None
-#         self._setups = None
-#         self._nets = None
-#         self._layers = None
-#         self._variables = None
-#         self._ports = None
-#         self._solutions = None
-#         self._stackup = None
-#         self._log = None
- 
-        releaseDesktop()
+        '''
+        Destructor to clean up Circuit resources.
+        Note: This only clears local references, not the AEDT application.
+        Call release() explicitly to properly shut down AEDT.
+        '''
+        try:
+            # Only clean up internal references, not the global AEDT instance
+            # releaseDesktop() should be called explicitly via release() method
+            pass
+        except Exception:
+            pass
         
     def __getitem__(self, key):
         
@@ -910,9 +908,31 @@ class Circuit(object):
 
 
     def release(self):
+        '''
+        Release COM resources and relinquish AEDT window control.
         
-        releaseDesktop()
+        This method releases the COM interface resources held by this Circuit object,
+        allowing other applications or scripts to control AEDT. The AEDT application
+        and open projects remain open.
+        
+        Behavior:
+        - Closes the circuit's project reference
+        - Clears internal object references
+        - Calls releaseDesktop() to release COM resources
+        
+        Note:
+            - AEDT window remains open
+            - Open projects remain open (but are not held by this object anymore)
+            - To fully close AEDT, call Circuit.quitAedt() instead
+        
+        Examples:
+            >>> layout = Circuit()
+            >>> layout.initDesign("MyProject", "MyDesign")
+            >>> # ... do work ...
+            >>> layout.release()  # Release COM resources
+        '''
         try:
+            # Clear internal references
             self._info = None
             self._oEditor = None
             self._oDesign = None
@@ -922,6 +942,9 @@ class Circuit(object):
             gc.collect()
         except AttributeError:
             pass
+        
+        # Release COM resources - this allows other apps/scripts to use AEDT
+        releaseDesktop()
 
     @classmethod
     def setClr(cls):

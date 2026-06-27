@@ -11,9 +11,6 @@
 		<SubMenu Type="MenuItem" Name="CloseAllProjectNotSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAllProjectWithoutSave"></SubMenu>
 		<SubMenu Type="MenuItem" Name="ReloadProject" ExecuteType="IronPython" Path="$UserLib/Desktop/Close.py" EntryFunc="Reload"></SubMenu>
 	</SubMenu>
-	<SubMenu Name="License">
-		<SubMenu Type="MenuItem" Name="licenseConnectionReset(VPN)" ExecuteType="EXE" Path="$UserLib/App/licenseConnectionReset.bat"></SubMenu>
-	</SubMenu>
 
 	<SubMenu Type="Separator"/>
 	<SubMenu Type="MenuItem" Name="OpenToolboxDir" ExecuteType="Python" Path="$UserLib/Desktop/OpenToolboxDir.py" ></SubMenu>

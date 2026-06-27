@@ -262,6 +262,9 @@ class ArrayStruct(object):
         if self.maps and isinstance(self.maps, (dict, ComplexDict)):
             return ComplexDict(self.maps)
         return None
+    #20260613 增加__iter__() 方法，suport for for loop, return only key value
+    def __iter__(self):
+        return iter(self.Keys)
         
     def __getitem__(self, key):
         
@@ -273,7 +276,8 @@ class ArrayStruct(object):
         #         #use as list
         #         return self.Array[key]
         if isinstance(key, (int,slice)):
-            return self.Keys[key] #20260613 suport for for loop, return only key value
+            return self.Array[key] #return as list, not ArrayStruct, use as: a[0] = xxx
+            # return self.Keys[key] #20260613 suport for for loop, return only key value
 
         #map key have high priority then Array key
         maps = self._get_maps()

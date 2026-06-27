@@ -328,6 +328,10 @@ class ComplexDict(object):
 
     # --- Magic Methods ---
 
+    #20260613 增加__iter__() 方法，suport for for loop, return only key value
+    def __iter__(self):
+        return iter(self._dict.keys())
+
     def __getitem__(self, key):
         if isinstance(key, int):
             keys = list(self._dict.keys())

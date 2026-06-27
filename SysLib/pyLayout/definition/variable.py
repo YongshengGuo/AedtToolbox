@@ -187,7 +187,7 @@ class Variables(Definitions):
         
         obj = self.layout.oProject if var.startswith("$") else self.layout.oDesign
         if var in self.layout.oProject.GetVariables() + self.layout.oDesign.GetVariables():
-            log.info("change value for exist variable: %s"%var)
+            log.debug("change value for exist variable: %s"%var)
             obj.ChangeProperty(
                 [
                     "NAME:AllTabs",
