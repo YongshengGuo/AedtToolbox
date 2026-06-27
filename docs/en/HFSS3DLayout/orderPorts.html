@@ -14,25 +14,25 @@
       
       
         
-          <link rel="alternate" href="../../index.html" hreflang="zh">
+          <link rel="alternate" href="../../HFSS3DLayout/orderPorts.html" hreflang="zh">
         
-          <link rel="alternate" href="../index.html" hreflang="en">
+          <link rel="alternate" href="orderPorts.html" hreflang="en">
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>orderPorts - AedtToolbox Help - English</title>
+        <title>Order Ports - AedtToolbox Help</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,7 +53,11 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -94,7 +98,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../index.html" title="AedtToolbox Help - English" class="md-header__button md-logo" aria-label="AedtToolbox Help - English" data-md-component="logo">
+    <a href="../index.html" title="AedtToolbox Help" class="md-header__button md-logo" aria-label="AedtToolbox Help" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -108,13 +112,13 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            AedtToolbox Help - English
+            AedtToolbox Help
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              orderPorts
+              Order Ports
             
           </span>
         </div>
@@ -127,9 +131,9 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="cyan"  aria-label="Switch to Dark Mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="cyan"  aria-label="切换到暗色模式"  type="radio" name="__palette" id="__palette_0">
     
-      <label class="md-header__button md-icon" title="Switch to Dark Mode" for="__palette_1" hidden>
+      <label class="md-header__button md-icon" title="切换到暗色模式" for="__palette_1" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
       </label>
     
@@ -137,9 +141,9 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="amber" data-md-color-accent="lime"  aria-label="Switch to Light Mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="amber" data-md-color-accent="lime"  aria-label="切换到亮色模式"  type="radio" name="__palette" id="__palette_1">
     
-      <label class="md-header__button md-icon" title="Switch to Light Mode" for="__palette_0" hidden>
+      <label class="md-header__button md-icon" title="切换到亮色模式" for="__palette_0" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
       </label>
     
@@ -161,13 +165,13 @@
       <ul class="md-select__list">
         
           <li class="md-select__item">
-            <a href="../../index.html" hreflang="zh" class="md-select__link">
+            <a href="../../HFSS3DLayout/orderPorts.html" hreflang="zh" class="md-select__link">
               中文
             </a>
           </li>
         
           <li class="md-select__item">
-            <a href="../index.html" hreflang="en" class="md-select__link">
+            <a href="orderPorts.html" hreflang="en" class="md-select__link">
               English
             </a>
           </li>
@@ -283,13 +287,13 @@
     
     
       <li class="md-tabs__item">
-        <a href="ExportToHfssWithNets.html" class="md-tabs__link">
+        <a href="../Toolkits/TransmissionLineToolkit.html" class="md-tabs__link">
           
   
   
     
   
-  HFSS3DLayout
+  Toolkits
 
         </a>
       </li>
@@ -307,13 +311,13 @@
     
     
       <li class="md-tabs__item md-tabs__item--active">
-        <a href="AutoXNet.html" class="md-tabs__link">
+        <a href="ExportToHfssWithNets.html" class="md-tabs__link">
           
   
   
     
   
-  Maxwell
+  HFSS 3D Layout
 
         </a>
       </li>
@@ -349,13 +353,13 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../index.html" title="AedtToolbox Help - English" class="md-nav__button md-logo" aria-label="AedtToolbox Help - English" data-md-component="logo">
+    <a href="../index.html" title="AedtToolbox Help" class="md-nav__button md-logo" aria-label="AedtToolbox Help" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    AedtToolbox Help - English
+    AedtToolbox Help
   </label>
   
   <ul class="md-nav__list" data-md-scrollfix>
@@ -476,7 +480,7 @@
   <span class="md-ellipsis">
     
   
-    Add MenuItem
+    Add Menu Item
   
 
     
@@ -560,7 +564,7 @@
   <span class="md-ellipsis">
     
   
-    Quit Aedt
+    Quit AEDT
   
 
     
@@ -588,7 +592,7 @@
   <span class="md-ellipsis">
     
   
-    Update
+    Updates
   
 
     
@@ -617,18 +621,6 @@
   
     
     
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
       
         
       
@@ -655,7 +647,7 @@
   <span class="md-ellipsis">
     
   
-    HFSS3DLayout
+    Toolkits
   
 
     
@@ -671,7 +663,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    HFSS3DLayout
+    Toolkits
   
 
           </label>
@@ -684,14 +676,14 @@
   
   
     <li class="md-nav__item">
-      <a href="ExportToHfssWithNets.html" class="md-nav__link">
+      <a href="../Toolkits/TransmissionLineToolkit.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ExportToHfssWithNets
+    Transmission Line Toolkit
   
 
     
@@ -712,14 +704,14 @@
   
   
     <li class="md-nav__item">
-      <a href="ImportCSVStackup.html" class="md-nav__link">
+      <a href="../Toolkits/addPyaedtPannel.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ImportCSVStackup
+    Add PyAEDT Panels
   
 
     
@@ -728,315 +720,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="AutoXNet.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    AutoXNet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="deleteInvalidRLC.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DeleteInvalidRLC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="AutoBackdrill.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    AutoBackdrill
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="KeepHDIViaPad.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    KeepHDIViaPad
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="RenameEdgePort.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    RenameEdgePort
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    orderPorts
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="orderPorts.html" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    orderPorts
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#menu-location" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Menu Location
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#function-description" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Function Description
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#operation-instructions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Operation Instructions
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#final-effect" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Final Effect
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Final Effect">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#before-sorting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Before sorting:
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#after-sorting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        After sorting:
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#s-parameter-output" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S-Parameter Output
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1059,6 +742,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -1096,7 +783,7 @@
   <span class="md-ellipsis">
     
   
-    Maxwell
+    HFSS 3D Layout
   
 
     
@@ -1112,11 +799,67 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Maxwell
+    HFSS 3D Layout
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ExportToHfssWithNets.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export To HFSS With Nets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ImportCSVStackup.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import CSV Stackup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1132,7 +875,7 @@
   <span class="md-ellipsis">
     
   
-    AutoXNet
+    Auto X-Net
   
 
     
@@ -1160,7 +903,7 @@
   <span class="md-ellipsis">
     
   
-    DeleteInvalidRLC
+    Delete Invalid RLC
   
 
     
@@ -1188,7 +931,7 @@
   <span class="md-ellipsis">
     
   
-    AutoBackdrill
+    Auto Backdrill
   
 
     
@@ -1216,7 +959,7 @@
   <span class="md-ellipsis">
     
   
-    KeepHDIViaPad
+    Keep HDI Via Pad
   
 
     
@@ -1244,7 +987,7 @@
   <span class="md-ellipsis">
     
   
-    RenameEdgePort
+    Rename Edge Port
   
 
     
@@ -1281,7 +1024,7 @@
   <span class="md-ellipsis">
     
   
-    orderPorts
+    Order Ports
   
 
     
@@ -1299,7 +1042,7 @@
   <span class="md-ellipsis">
     
   
-    orderPorts
+    Order Ports
   
 
     
@@ -1336,10 +1079,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#function-description" class="md-nav__link">
+  <a href="#description" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Function Description
+        Description
       
     </span>
   </a>
@@ -1347,10 +1090,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#operation-instructions" class="md-nav__link">
+  <a href="#how-to-use" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Operation Instructions
+        How to Use
       
     </span>
   </a>
@@ -1358,22 +1101,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#final-effect" class="md-nav__link">
+  <a href="#result" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Final Effect
+        Result
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Final Effect">
+    <nav class="md-nav" aria-label="Result">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#before-sorting" class="md-nav__link">
+  <a href="#before" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Before sorting:
+        Before
       
     </span>
   </a>
@@ -1381,10 +1124,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#after-sorting" class="md-nav__link">
+  <a href="#after" class="md-nav__link">
     <span class="md-ellipsis">
       
-        After sorting:
+        After
       
     </span>
   </a>
@@ -1392,10 +1135,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#s-parameter-output" class="md-nav__link">
+  <a href="#s-parameter-output-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        S-Parameter Output
+        S-parameter output example
       
     </span>
   </a>
@@ -1404,17 +1147,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1472,10 +1204,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#function-description" class="md-nav__link">
+  <a href="#description" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Function Description
+        Description
       
     </span>
   </a>
@@ -1483,10 +1215,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#operation-instructions" class="md-nav__link">
+  <a href="#how-to-use" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Operation Instructions
+        How to Use
       
     </span>
   </a>
@@ -1494,22 +1226,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#final-effect" class="md-nav__link">
+  <a href="#result" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Final Effect
+        Result
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Final Effect">
+    <nav class="md-nav" aria-label="Result">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#before-sorting" class="md-nav__link">
+  <a href="#before" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Before sorting:
+        Before
       
     </span>
   </a>
@@ -1517,10 +1249,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#after-sorting" class="md-nav__link">
+  <a href="#after" class="md-nav__link">
     <span class="md-ellipsis">
       
-        After sorting:
+        After
       
     </span>
   </a>
@@ -1528,10 +1260,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#s-parameter-output" class="md-nav__link">
+  <a href="#s-parameter-output-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        S-Parameter Output
+        S-parameter output example
       
     </span>
   </a>
@@ -1540,17 +1272,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Notes
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1597,10 +1318,10 @@
     
     
       <li class="md-path__item">
-        <a href="AutoXNet.html" class="md-path__link">
+        <a href="ExportToHfssWithNets.html" class="md-path__link">
           
   <span class="md-ellipsis">
-    Maxwell
+    HFSS 3D Layout
   </span>
 
         </a>
@@ -1621,20 +1342,20 @@
 
 <h1 id="orderports">orderPorts</h1>
 <h2 id="menu-location">Menu Location</h2>
-<p>Port-&gt;orderPorts</p>
-<h2 id="function-description">Function Description</h2>
-<p>Sort ports in 3D Layout according to Net. The sorting rules are:
-1. Device
-2. Bus (numbers on Net)
-3. Differential pairs P/N, +/-, P/M</p>
-<h2 id="operation-instructions">Operation Instructions</h2>
-<p>Keep the 3D Layout window in the foreground and run the Port-&gt;orderPorts command.</p>
-<h2 id="final-effect">Final Effect</h2>
-<h3 id="before-sorting">Before sorting:</h3>
-<p><img alt="Alt text" src="images/image-1%5B4%5D.png" /></p>
-<h3 id="after-sorting">After sorting:</h3>
-<p><img alt="Alt text" src="images/image%5B8%5D.png" /></p>
-<h3 id="s-parameter-output">S-Parameter Output</h3>
+<p>Port → orderPorts</p>
+<h2 id="description">Description</h2>
+<p>Sorts 3D Layout ports by Net using the following rules:
+1. Component (refdes)
+2. Bus index (numeric suffix on net name)
+3. Differential pair P/N, +/−, P/M</p>
+<h2 id="how-to-use">How to Use</h2>
+<p>Keep the 3D Layout window in focus and run <strong>Port → orderPorts</strong>.</p>
+<h2 id="result">Result</h2>
+<h3 id="before">Before</h3>
+<p><img alt="Alt text" src="../../HFSS3DLayout/images/image-1%5B4%5D.png" /></p>
+<h3 id="after">After</h3>
+<p><img alt="Alt text" src="../../HFSS3DLayout/images/image%5B8%5D.png" /></p>
+<h3 id="s-parameter-output-example">S-parameter output example</h3>
 <pre><code class="language-python"># GHz S MA R 50.000000
 ! Terminal data exported
 ! Port[1] = XS23.AE19.MCTR2_CNIP1CH2FP_GTX_T0_P
@@ -1642,68 +1363,7 @@
 ! Port[3] = XS23.AE21.MCTR2_CNIP1CH2FP_GTX_T1_P
 ! Port[4] = XS23.AD21.MCTR2_CNIP1CH2FP_GTX_T1_N
 ! Port[5] = XS23.AE23.MCTR2_CNIP1CH2FP_GTX_T2_P
-! Port[6] = XS23.AD23.MCTR2_CNIP1CH2FP_GTX_T2_N
-! Port[7] = XS23.AE25.MCTR2_CNIP1CH2FP_GTX_T3_P
-! Port[8] = XS23.AD25.MCTR2_CNIP1CH2FP_GTX_T3_N
-! Port[9] = XS23.AE27.MCTR2_CNIP1CH2FP_GTX_T4_P
-! Port[10] = XS23.AD27.MCTR2_CNIP1CH2FP_GTX_T4_N
-! Port[11] = XS23.AH21.MCTR2_CNIP1CH2FP_GTX_T5_P
-! Port[12] = XS23.AG21.MCTR2_CNIP1CH2FP_GTX_T5_N
-! Port[13] = XS23.AH23.MCTR2_CNIP1CH2FP_GTX_T6_P
-! Port[14] = XS23.AG23.MCTR2_CNIP1CH2FP_GTX_T6_N
-! Port[15] = XS23.AH25.MCTR2_CNIP1CH2FP_GTX_T7_P
-! Port[16] = XS23.AG25.MCTR2_CNIP1CH2FP_GTX_T7_N
-! Port[17] = XS23.AF20.MCTR2_CNIP1CH2FP_GTX_R0_P
-! Port[18] = XS23.AE20.MCTR2_CNIP1CH2FP_GTX_R0_N
-! Port[19] = XS23.AF22.MCTR2_CNIP1CH2FP_GTX_R1_P
-! Port[20] = XS23.AE22.MCTR2_CNIP1CH2FP_GTX_R1_N
-! Port[21] = XS23.AF24.MCTR2_CNIP1CH2FP_GTX_R2_P
-! Port[22] = XS23.AE24.MCTR2_CNIP1CH2FP_GTX_R2_N
-! Port[23] = XS23.AF26.MCTR2_CNIP1CH2FP_GTX_R3_P
-! Port[24] = XS23.AE26.MCTR2_CNIP1CH2FP_GTX_R3_N
-! Port[25] = XS23.AF28.MCTR2_CNIP1CH2FP_GTX_R4_P
-! Port[26] = XS23.AE28.MCTR2_CNIP1CH2FP_GTX_R4_N
-! Port[27] = XS23.AI20.MCTR2_CNIP1CH2FP_GTX_R5_P
-! Port[28] = XS23.AH20.MCTR2_CNIP1CH2FP_GTX_R5_N
-! Port[29] = XS23.AI22.MCTR2_CNIP1CH2FP_GTX_R6_P
-! Port[30] = XS23.AH22.MCTR2_CNIP1CH2FP_GTX_R6_N
-! Port[31] = XS23.AI24.MCTR2_CNIP1CH2FP_GTX_R7_P
-! Port[32] = XS23.AH24.MCTR2_CNIP1CH2FP_GTX_R7_N
-! Port[33] = XS32.BC2.MCTR2_CNIP1CH2FP_GTX_T0_P
-! Port[34] = XS32.BB2.MCTR2_CNIP1CH2FP_GTX_T0_N
-! Port[35] = XS32.BC4.MCTR2_CNIP1CH2FP_GTX_T1_P
-! Port[36] = XS32.BB4.MCTR2_CNIP1CH2FP_GTX_T1_N
-! Port[37] = XS32.BC6.MCTR2_CNIP1CH2FP_GTX_T2_P
-! Port[38] = XS32.BB6.MCTR2_CNIP1CH2FP_GTX_T2_N
-! Port[39] = XS32.BC8.MCTR2_CNIP1CH2FP_GTX_T3_P
-! Port[40] = XS32.BB8.MCTR2_CNIP1CH2FP_GTX_T3_N
-! Port[41] = XS32.BF2.MCTR2_CNIP1CH2FP_GTX_T4_P
-! Port[42] = XS32.BE2.MCTR2_CNIP1CH2FP_GTX_T4_N
-! Port[43] = XS32.BF4.MCTR2_CNIP1CH2FP_GTX_T5_P
-! Port[44] = XS32.BE4.MCTR2_CNIP1CH2FP_GTX_T5_N
-! Port[45] = XS32.BF6.MCTR2_CNIP1CH2FP_GTX_T6_P
-! Port[46] = XS32.BE6.MCTR2_CNIP1CH2FP_GTX_T6_N
-! Port[47] = XS32.BF8.MCTR2_CNIP1CH2FP_GTX_T7_P
-! Port[48] = XS32.BE8.MCTR2_CNIP1CH2FP_GTX_T7_N
-! Port[49] = XS32.BB3.MCTR2_CNIP1CH2FP_GTX_R0_P
-! Port[50] = XS32.BA3.MCTR2_CNIP1CH2FP_GTX_R0_N
-! Port[51] = XS32.BB5.MCTR2_CNIP1CH2FP_GTX_R1_P
-! Port[52] = XS32.BA5.MCTR2_CNIP1CH2FP_GTX_R1_N
-! Port[53] = XS32.BB7.MCTR2_CNIP1CH2FP_GTX_R2_P
-! Port[54] = XS32.BA7.MCTR2_CNIP1CH2FP_GTX_R2_N
-! Port[55] = XS32.BB9.MCTR2_CNIP1CH2FP_GTX_R3_P
-! Port[56] = XS32.BA9.MCTR2_CNIP1CH2FP_GTX_R3_N
-! Port[57] = XS32.BE3.MCTR2_CNIP1CH2FP_GTX_R4_P
-! Port[58] = XS32.BD3.MCTR2_CNIP1CH2FP_GTX_R4_N
-! Port[59] = XS32.BE5.MCTR2_CNIP1CH2FP_GTX_R5_P
-! Port[60] = XS32.BD5.MCTR2_CNIP1CH2FP_GTX_R5_N
-! Port[61] = XS32.BE7.MCTR2_CNIP1CH2FP_GTX_R6_P
-! Port[62] = XS32.BD7.MCTR2_CNIP1CH2FP_GTX_R6_N
-! Port[63] = XS32.BE9.MCTR2_CNIP1CH2FP_GTX_R7_P
-! Port[64] = XS32.BD9.MCTR2_CNIP1CH2FP_GTX_R7_N
 </code></pre>
-<h2 id="notes">Notes</h2>
-<p>Currently does not support naming coupled waveports, such as waveports containing 2 or more terminals.</p>
 
 
 
@@ -1741,7 +1401,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="RenameEdgePort.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: RenameEdgePort">
+          <a href="RenameEdgePort.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Rename Edge Port">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256l137.3-137.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg>
@@ -1751,7 +1411,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                RenameEdgePort
+                Rename Edge Port
               </div>
             </div>
           </a>
@@ -1785,18 +1445,14 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
-    
     
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.instant.preview", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.tabs.sections", "navigation.footer", "navigation.path", "navigation.indexes", "toc.follow", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "search.share", "header.autohide", "content.tabs.link", "content.tooltips", "content.code.copy", "content.action.edit", "content.action.view", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.tabs.sections", "navigation.footer", "navigation.path", "navigation.indexes", "toc.follow", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "search.share", "header.autohide", "content.tabs.link", "content.tooltips", "content.code.copy", "content.action.edit", "content.action.view", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
-      
-        <script src="../assets/js/lang_switch.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

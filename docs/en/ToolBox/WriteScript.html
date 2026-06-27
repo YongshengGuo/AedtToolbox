@@ -16,25 +16,25 @@
       
       
         
-          <link rel="alternate" href="../../index.html" hreflang="zh">
+          <link rel="alternate" href="../../ToolBox/WriteScript.html" hreflang="zh">
         
-          <link rel="alternate" href="../index.html" hreflang="en">
+          <link rel="alternate" href="WriteScript.html" hreflang="en">
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
-        <title>Write your Script - AedtToolbox Help - English</title>
+        <title>Write your Script - AedtToolbox Help</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -55,7 +55,11 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -80,7 +84,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#writing-user-defined-scripts" class="md-skip">
+        <a href="#writing-custom-scripts" class="md-skip">
           Skip to content
         </a>
       
@@ -96,7 +100,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../index.html" title="AedtToolbox Help - English" class="md-header__button md-logo" aria-label="AedtToolbox Help - English" data-md-component="logo">
+    <a href="../index.html" title="AedtToolbox Help" class="md-header__button md-logo" aria-label="AedtToolbox Help" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -110,7 +114,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            AedtToolbox Help - English
+            AedtToolbox Help
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -129,9 +133,9 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="cyan"  aria-label="Switch to Dark Mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="amber" data-md-color-accent="cyan"  aria-label="切换到暗色模式"  type="radio" name="__palette" id="__palette_0">
     
-      <label class="md-header__button md-icon" title="Switch to Dark Mode" for="__palette_1" hidden>
+      <label class="md-header__button md-icon" title="切换到暗色模式" for="__palette_1" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
       </label>
     
@@ -139,9 +143,9 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="amber" data-md-color-accent="lime"  aria-label="Switch to Light Mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="amber" data-md-color-accent="lime"  aria-label="切换到亮色模式"  type="radio" name="__palette" id="__palette_1">
     
-      <label class="md-header__button md-icon" title="Switch to Light Mode" for="__palette_0" hidden>
+      <label class="md-header__button md-icon" title="切换到亮色模式" for="__palette_0" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
       </label>
     
@@ -163,13 +167,13 @@
       <ul class="md-select__list">
         
           <li class="md-select__item">
-            <a href="../../index.html" hreflang="zh" class="md-select__link">
+            <a href="../../ToolBox/WriteScript.html" hreflang="zh" class="md-select__link">
               中文
             </a>
           </li>
         
           <li class="md-select__item">
-            <a href="../index.html" hreflang="en" class="md-select__link">
+            <a href="WriteScript.html" hreflang="en" class="md-select__link">
               English
             </a>
           </li>
@@ -287,13 +291,13 @@
     
     
       <li class="md-tabs__item">
-        <a href="../HFSS3DLayout/ExportToHfssWithNets.html" class="md-tabs__link">
+        <a href="../Toolkits/TransmissionLineToolkit.html" class="md-tabs__link">
           
   
   
     
   
-  HFSS3DLayout
+  Toolkits
 
         </a>
       </li>
@@ -309,13 +313,13 @@
     
     
       <li class="md-tabs__item">
-        <a href="../HFSS3DLayout/AutoXNet.html" class="md-tabs__link">
+        <a href="../HFSS3DLayout/ExportToHfssWithNets.html" class="md-tabs__link">
           
   
   
     
   
-  Maxwell
+  HFSS 3D Layout
 
         </a>
       </li>
@@ -351,13 +355,13 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../index.html" title="AedtToolbox Help - English" class="md-nav__button md-logo" aria-label="AedtToolbox Help - English" data-md-component="logo">
+    <a href="../index.html" title="AedtToolbox Help" class="md-nav__button md-logo" aria-label="AedtToolbox Help" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
-    AedtToolbox Help - English
+    AedtToolbox Help
   </label>
   
   <ul class="md-nav__list" data-md-scrollfix>
@@ -483,7 +487,7 @@
   <span class="md-ellipsis">
     
   
-    Add MenuItem
+    Add Menu Item
   
 
     
@@ -564,10 +568,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#writing-python-scripts" class="md-nav__link">
+  <a href="#python-script-development" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing Python Scripts
+        Python Script Development
       
     </span>
   </a>
@@ -625,7 +629,7 @@
   <span class="md-ellipsis">
     
   
-    Quit Aedt
+    Quit AEDT
   
 
     
@@ -653,7 +657,7 @@
   <span class="md-ellipsis">
     
   
-    Update
+    Updates
   
 
     
@@ -682,18 +686,6 @@
   
     
     
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
       
         
       
@@ -720,7 +712,7 @@
   <span class="md-ellipsis">
     
   
-    HFSS3DLayout
+    Toolkits
   
 
     
@@ -736,7 +728,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    HFSS3DLayout
+    Toolkits
   
 
           </label>
@@ -749,14 +741,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../HFSS3DLayout/ExportToHfssWithNets.html" class="md-nav__link">
+      <a href="../Toolkits/TransmissionLineToolkit.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ExportToHfssWithNets
+    Transmission Line Toolkit
   
 
     
@@ -777,182 +769,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../HFSS3DLayout/ImportCSVStackup.html" class="md-nav__link">
+      <a href="../Toolkits/addPyaedtPannel.html" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    ImportCSVStackup
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../HFSS3DLayout/AutoXNet.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    AutoXNet
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../HFSS3DLayout/deleteInvalidRLC.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    DeleteInvalidRLC
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../HFSS3DLayout/AutoBackdrill.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    AutoBackdrill
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../HFSS3DLayout/KeepHDIViaPad.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    KeepHDIViaPad
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../HFSS3DLayout/RenameEdgePort.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    RenameEdgePort
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../HFSS3DLayout/orderPorts.html" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    orderPorts
+    Add PyAEDT Panels
   
 
     
@@ -981,6 +805,10 @@
   
     
     
+      
+        
+      
+        
       
         
       
@@ -1015,7 +843,7 @@
   <span class="md-ellipsis">
     
   
-    Maxwell
+    HFSS 3D Layout
   
 
     
@@ -1031,11 +859,67 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Maxwell
+    HFSS 3D Layout
   
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../HFSS3DLayout/ExportToHfssWithNets.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export To HFSS With Nets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../HFSS3DLayout/ImportCSVStackup.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import CSV Stackup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1051,7 +935,7 @@
   <span class="md-ellipsis">
     
   
-    AutoXNet
+    Auto X-Net
   
 
     
@@ -1079,7 +963,7 @@
   <span class="md-ellipsis">
     
   
-    DeleteInvalidRLC
+    Delete Invalid RLC
   
 
     
@@ -1107,7 +991,7 @@
   <span class="md-ellipsis">
     
   
-    AutoBackdrill
+    Auto Backdrill
   
 
     
@@ -1135,7 +1019,7 @@
   <span class="md-ellipsis">
     
   
-    KeepHDIViaPad
+    Keep HDI Via Pad
   
 
     
@@ -1163,7 +1047,7 @@
   <span class="md-ellipsis">
     
   
-    RenameEdgePort
+    Rename Edge Port
   
 
     
@@ -1191,7 +1075,7 @@
   <span class="md-ellipsis">
     
   
-    orderPorts
+    Order Ports
   
 
     
@@ -1239,10 +1123,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#writing-python-scripts" class="md-nav__link">
+  <a href="#python-script-development" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Writing Python Scripts
+        Python Script Development
       
     </span>
   </a>
@@ -1314,31 +1198,28 @@
 
 
 
-<h1 id="writing-user-defined-scripts">Writing User-Defined Scripts</h1>
-<h2 id="writing-python-scripts">Writing Python Scripts</h2>
-<p>Python scripts can be developed in the normal way. Wrap the functionality that needs to run into a function, and then specify that function as the entry point in the menu XML.</p>
-<p>The default entry function is the main() function. It is recommended to use main() as the entry function.</p>
-<p>In the example below, the Python file defines multiple functions. You can specify different functions as entry points in the XML to complete different tasks.</p>
-<p>You can also pass different Arguments to achieve similar functionality.</p>
-<pre><code class="language-python">
-import sys,os
+<h1 id="writing-custom-scripts">Writing Custom Scripts</h1>
+<h2 id="python-script-development">Python Script Development</h2>
+<p>Python scripts can be developed normally. Wrap the functionality into a function and specify it as the entry function in the XML menu configuration.<br />
+The default entry function is <code>main()</code> — using <code>main()</code> as the entry point is recommended.</p>
+<p>The example below defines multiple functions in one Python file. Different functions can be specified as entry points in the XML to achieve different actions. Alternatively, the same function can handle different behaviors via <code>Arguments</code>.</p>
+<pre><code class="language-python">import sys, os
 
 Module = sys.modules['__main__']
 if hasattr(Module, &quot;oDesktop&quot;):
     oDesktop = getattr(Module, &quot;oDesktop&quot;)
 else:
-    raise Exception(&quot;oDesktop intial error.&quot;)
+    raise Exception(&quot;oDesktop initialization error.&quot;)
 
 
 def closeAndSave():
     oProject = oDesktop.GetActiveProject()
     oProject.Save()
-    oProject.Close() 
+    oProject.Close()
 
 def closeNotSave():
     oProject = oDesktop.GetActiveProject()
-    # oProject.Save()
-    oProject.Close() #Unsaved changes will be lost.
+    oProject.Close()  # Unsaved changes will be lost.
 
 def closeAllProjectWithSave():
     projects = oDesktop.GetProjects()
@@ -1349,29 +1230,27 @@ def closeAllProjectWithSave():
 def closeAllProjectWithoutSave():
     projects = oDesktop.GetProjects()
     for oProject in projects:
-        # oProject.Save()
-        oProject.Close() #Unsaved changes will be lost.
+        oProject.Close()
 
 def ForceQuitAedt():
     oDesktop.QuitApplication()
 
 def Reload():
     oProject = oDesktop.GetActiveProject()
-    aedtPath = os.path.join(oProject.GetPath(),oProject.GetName()+&quot;.aedt&quot;)
+    aedtPath = os.path.join(oProject.GetPath(), oProject.GetName() + &quot;.aedt&quot;)
     oProject.Close()
-    print(&quot;Reload aedt:%s&quot;%aedtPath)
+    print(&quot;Reload aedt: %s&quot; % aedtPath)
     oDesktop.OpenProject(aedtPath)
-
 </code></pre>
-<p>XML Menu Configuration</p>
-<pre><code class="language-xml">    &lt;SubMenu Name=&quot;Close&quot;&gt;
-        &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;QuitAedt&quot; ExecuteType=&quot;Python&quot; Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;ForceQuitAedt&quot;&gt;&lt;/SubMenu&gt;
-        &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;CloseProjectAndSave&quot; ExecuteType=&quot;Python&quot; Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;closeAndSave&quot;&gt;&lt;/SubMenu&gt;
-        &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;CloseProjectNotSave&quot; ExecuteType=&quot;Python&quot; Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;closeNotSave&quot;&gt;&lt;/SubMenu&gt;
-        &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;CloseAllProjectAndSave&quot; ExecuteType=&quot;Python&quot; Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;closeAllProjectWithSave&quot;&gt;&lt;/SubMenu&gt;
-        &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;CloseAllProjectNotSave&quot; ExecuteType=&quot;Python&quot; Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;closeAllProjectWithoutSave&quot;&gt;&lt;/SubMenu&gt;
-        &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;ReloadProject&quot; ExecuteType=&quot;IronPython&quot; Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;Reload&quot;&gt;&lt;/SubMenu&gt;
-    &lt;/SubMenu&gt;
+<p>XML menu configuration:</p>
+<pre><code class="language-xml">&lt;SubMenu Name=&quot;Close&quot;&gt;
+    &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;QuitAedt&quot; ExecuteType=&quot;Python&quot;
+             Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;ForceQuitAedt&quot;/&gt;
+    &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;CloseProjectAndSave&quot; ExecuteType=&quot;Python&quot;
+             Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;closeAndSave&quot;/&gt;
+    &lt;SubMenu Type=&quot;MenuItem&quot; Name=&quot;CloseProjectNotSave&quot; ExecuteType=&quot;Python&quot;
+             Path=&quot;$UserLib/Desktop/Close.py&quot; EntryFunc=&quot;closeNotSave&quot;/&gt;
+&lt;/SubMenu&gt;
 </code></pre>
 
 
@@ -1410,7 +1289,7 @@ def Reload():
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="AddItem.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Add MenuItem">
+          <a href="AddItem.html" class="md-footer__link md-footer__link--prev" aria-label="Previous: Add Menu Item">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256l137.3-137.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg>
@@ -1420,7 +1299,7 @@ def Reload():
                 Previous
               </span>
               <div class="md-ellipsis">
-                Add MenuItem
+                Add Menu Item
               </div>
             </div>
           </a>
@@ -1470,18 +1349,14 @@ def Reload():
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
-    
     
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.instant.preview", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.tabs.sections", "navigation.footer", "navigation.path", "navigation.indexes", "toc.follow", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "search.share", "header.autohide", "content.tabs.link", "content.tooltips", "content.code.copy", "content.action.edit", "content.action.view", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.tabs.sections", "navigation.footer", "navigation.path", "navigation.indexes", "toc.follow", "navigation.top", "navigation.footer", "search.suggest", "search.highlight", "search.share", "header.autohide", "content.tabs.link", "content.tooltips", "content.code.copy", "content.action.edit", "content.action.view", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
-      
-        <script src="../assets/js/lang_switch.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
