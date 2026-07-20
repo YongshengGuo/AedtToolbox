@@ -487,8 +487,47 @@ class ArrayStruct(object):
     def append(self,value):
         self._datas.append(value)
         self._keys = None
+        
+    def insert(self,value,after=None):
+        if after is None:
+            self._datas.append(value)
+        else:
+            idx, typ = _find_key_in_level(self._datas, after)
+            if idx == -1:
+                raise Exception("key not in array:%s"%str(after))
+            if typ == 'value':
+                self._datas.insert(idx + 2, value)  # Insert after the value
+            elif typ == 'block':
+                self._datas.insert(idx + 1, value)  # Insert after the block
+            else:
+                raise Exception("Unknown key type")
+        self._keys = None
 
-    
+    def replaceKey(self,oldKey,newKey):
+        datas = self._datas
+        if not oldKey or not newKey:
+            raise Exception("replace key must give.")
+        
+        if isinstance(oldKey, str) and isinstance(newKey, str):
+            oldKeyList = re.split(r"[\\/]", oldKey)
+            newKeyList = re.split(r"[\\/]", newKey)
+            if len(oldKeyList) != len(newKeyList):
+                raise Exception("old key and new key must have same length.")
+            for i in range(len(oldKeyList)):
+                idx, typ = _find_key_in_level(datas, oldKeyList[i])
+                if idx == -1:
+                    raise Exception("key not in array:%s"%str(oldKey))
+                if typ == 'value':
+                    datas[idx] = "%s:=" % newKeyList[i]
+                elif typ == 'block':
+                    datas[idx] = "NAME:%s" % newKeyList[i]
+                else:
+                    raise Exception("Unknown key type")
+        else:
+            raise Exception("old key and new key must be string.")
+        self._keys = None
+
+
     def delKey(self,path):
         
         datas = self._datas

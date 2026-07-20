@@ -2,8 +2,13 @@
 <Menu>
 	<SubMenu Name="Toolkits">
 		<SubMenu Type="MenuItem" Name="InstallPyaedtPannel" ExecuteType="Python" Path="$UserLib\toolkits\addPyaedtPanels\install_pyaedt_gui.py"></SubMenu>
-		<SubMenu Type="MenuItem" Name="TransmissionLineToolkit" ExecuteType="IronPython" Path="$UserLib\toolkits\q2d_tlineToolkit\TransmissionLineToolkit.py"></SubMenu>
+		<SubMenu Type="MenuItem" Name="q2d_TlineGenerator" ExecuteType="Python" Path="$UserLib\toolkits\q2d_TlineGenerator\TlineGenerator.py"></SubMenu>
 	</SubMenu>
+	
+	<!-- <SubMenu Name="CleanLayout">
+		<SubMenu Type="MenuItem" Name="CleanVariablesAndMaterials" ExecuteType="Python" Path="$UserLib\CleanLayout\CleanVariablesAndMaterials.py"></SubMenu>
+	</SubMenu> -->
+	
 	<SubMenu Name="Close">
 		<SubMenu Type="MenuItem" Name="QuitAedt" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="ForceQuitAedt"></SubMenu>
 		<SubMenu Type="MenuItem" Name="CloseProjectAndSave" ExecuteType="Python" Path="$UserLib/Desktop/Close.py" EntryFunc="closeAndSave"></SubMenu>

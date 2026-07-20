@@ -73,26 +73,12 @@ def readlines(path):
     Returns:
         list: 返回文件所有行
     '''
-#     with open(path,'r') as f:
-#         line = "readData" 
-#         while(line):
-#             line = f.readline()
-#             yield line
-#         f.close()     
-        
+
     try:
-        with open(path, 'r') as file:
-            # 读取文件内容，得到字节串
-            while True:
-                line = file.readline()
-                if not line:
-                    break
-                yield line 
-            file.close()
-
-
+        datas = readData(path)
+        return datas.splitlines()
     except:
-        log.exception("File read error, Note only ANSI file support: %s"%path)
+        log.exception("File read error: %s"%path)
 
         
 

@@ -29,74 +29,19 @@ from .object3DModel import Objects3DModle
 from ..common.common import log,isIronpython #log is a globle variable
 from ..common.unit import Unit
 from ..common.common import DisableAutoSave,ProcessTime
+from ..common.licenseChecker import LicenseChecker
 from ..pyLayout import Layout
+from ..edb.edbApp import EdbApp,EdbSIwaveOptions,edbToSIwave
 
-class Aedt3DToolBase(object):
+class Aedt3DToolBase(Layout):
     '''
     classdocs
     '''
-
+    def __init__(self,toolType=None, version=None, installDir=None,nonGraphical=False,newDesktop=False,usePyAedt=False,oDesktop = None):
+        super(Aedt3DToolBase,self).__init__(version=version, installDir=installDir,nonGraphical=nonGraphical,
+                                          newDesktop=newDesktop,usePyAedt=usePyAedt,oDesktop = oDesktop)
+        self._info.update("toolType",toolType)
     
-    def __init__(self,toolType=None, version=None, installDir=None,nonGraphical=False,newDesktop=False):
-        '''
-        初始化PyLayout对象环境
-        
-        - version和installDir都为None，会尝试启动最新版本的AEDT
-        - version和installDir都指定时， version优先级 高于 installDir
-        Examples:
-            >>> PyLayout()
-            open least version AEDT, return PyLayout
-
-            >>> PyLayout(version = "2013.1")
-            open AEDT 2013R1, return PyLayout
-        
-        '''
-        self.maps = {
-            "InstallPath":"InstallDir",
-            "Path":"ProjectPath",
-            "Ver":"Version",
-            }
-        self._info = ComplexDict({
-            "Version":None,
-            "InstallDir":None,
-            },maps=self.maps)
-        
-        self._info.update("Version", version)
-        self._info.update("InstallDir", installDir)
-        self._info.update("NonGraphical", nonGraphical)
-        self._info.update("newDesktop", newDesktop)
-        self._info.update("UsePyAedt", True)
-        self._info.update("PyAedtApp", None)
-        self._info.update("Log", log)
-#         self._info.update("options",options)
-        self._info.update("Maps", self.maps)
-        
-        if not isIronpython:
-            log.info("In cpython environment, pyaedt shold be install, install command: pip install pyaedt")
-#             self._info.update("UsePyAedt", True)
-        
-        #----- 3D Layout object
-        self._oDesktop = None
-        self._oProject = None
-        self._oDesign = None
-        self._oEditor = None
-        self._toolType = toolType
-        
-    def __del__(self):
-#         self._oDesktop = None
-#         self._info = None
-#         self._components = None
-#         self._setups = None
-#         self._nets = None
-#         self._layers = None
-#         self._variables = None
-#         self._ports = None
-#         self._solutions = None
-#         self._stackup = None
-#         self._log = None
- 
-        releaseDesktop()
-        
     def __getitem__(self, key):
         
         if not isinstance(key, str):
@@ -106,10 +51,8 @@ class Aedt3DToolBase(object):
             return self._info[key]
         
         if not self._oDesign:
-            log.exception("layout should be intial use '%s.initDesign(projectName = None,designName = None)'"%self._toolType)
+            log.exception("layout should be intial use '%s.initDesign(projectName = None,designName = None)'"%self.toolType)
             return
-        
-        # log.debug("try to get element type: %s"%key)
         
         if key in self._info["Objects"]:
             return self._info["Objects"][key]
@@ -120,255 +63,15 @@ class Aedt3DToolBase(object):
     def __setitem__(self, key,value):
         self._info[key] = value
         
-        
-    def __getattr__(self,key):
-#         当调用一个不存在的属性时，就会触发__getattr__()
-#         __getattribute__() 方法是无条件触发
-        if key in ['__get__','__set__']:
-            #just for debug run
-            return None
-
-        try:
-            return super(self.__class__,self).__getattribute__(key)
-        except:
-            # log.info("Layout __getattribute__ from info: %s"%str(key))
-            return self[key]
-        
-    def __setattr__(self, key, value):
-        if key in ["_oDesktop","_oProject","_oDesign","_oEditor","_info","_toolType","maps"]:
-            object.__setattr__(self,key,value)
-        else:
-            self[key] = value
-        
-    def __dir__(self):
-#         return object.__dir__(self)  + self.Props
-        return dir(self.__class__) + list(self.__dict__.keys()) + self.Props
-    
-    def __repr__(self):
-        return "%s Object"%self.__class__.__name__
-    
-    @property
-    def Info(self):
-        return self._info
-    
-    @property
-    def Props(self):
-        propKeys = list(self.Info.Keys)
-        if self.maps:
-            propKeys += list(self.maps.keys())
-             
-        return propKeys
-        
-    def __initByPyaedt(self):    
-        try:
-            from ansys.aedt.core import launch_desktop
-            log.info("try to initial oDesktop using PyLayout Lib... ")
-            self.PyAedtApp = launch_desktop(version = self.version,non_graphical=self.NonGraphical,new_desktop = self.newDesktop,close_on_exit=False)
-            self.UsePyAedt = True
-            self._oDesktop = self.PyAedtApp.odesktop
-            sys.modules["__main__"].oDesktop = self._oDesktop
-            log.logger = self.PyAedtApp.logger
-#             self._info.update("Log", self.PyAedtApp._logger)
-#             common.log = self.PyAedtApp._logger
-        except:
-            log.warning("pyaedt lib should be installed, install command: pip install pyaedt")
-#             log.info("if you don't want use pyaedt to intial pylayout, please set layout.usePyAedt = False before get oDesktop")
-            self.UsePyAedt = False
-            log.warning("pyaedt app intial error.")
-        
-        
-    @property
-    def oDesktop(self):
-        
-        if self._oDesktop:
-            return self._oDesktop
-        
-        #try to initial use pyaedt
-        log.debug("Try to load pyaedt.")
-        
-        #try to get global oDesktop
-        Module = sys.modules['__main__']
-        if hasattr(Module, "oDesktop"):
-            oDesktop = getattr(Module, "oDesktop")
-            if oDesktop:
-                self._oDesktop = oDesktop
-                self.UsePyAedt = bool(self.PyAedtApp) #may be lanuched from aedt internal
-                return oDesktop
-        
-        if self.NonGraphical:
-            log.info("Will be intial oDesktop in nonGraphical mnode.")
-        
-        #try to intial by pyaedt
-        if self.UsePyAedt:
-            self.__initByPyaedt()
-
-        #try to intial by internal method
-        if self._oDesktop == None: 
-            log.info("try to initial oDesktop using  internal method... ")
-            self._oDesktop = initializeDesktop(self.version,self.installDir,nonGraphical=self.NonGraphical,newDesktop=self.newDesktop)
-            self.installDir = self._oDesktop.GetExeDir()
-            sys.modules["__main__"].oDesktop = self._oDesktop
-            
-        #intial error
-        if self._oDesktop == None: 
-            log.exception("Intial oDesktop error... ")
-            
-        return self._oDesktop
-    
-    
-    def initProject(self,projectName = None):
-        #layout properties initial
-        #----- 3D Layout object
-#         self._oDesktop = None
-        self._oProject = None
-#         self._oDesign = None
-#         self._oEditor = None
-        oDesktop = self.oDesktop
-         
-#         log.debug("AEDT:"+self.Version)
-        projectList = oDesktop.GetProjectList()
-        #for COM Compatibility, yongsheng guo #20240422
-        if "ComObject" in str(type(projectList)):
-            projectList = [projectList[i] for i in range(projectList.count)]
-             
-        if len(projectList)<1:
-#             log.error("Must have one project opened in aedt.")
-#             exit()
-#             log.error("Must have one project opened in aedt.")
-            log.warning("not found opened projects, insert new one.")
-            oProject = oDesktop.NewProject()
-            oProject.InsertDesign("HFSS 3D Layout Design", "Layout1", "", "")
-            self._oProject = oProject
-         
-        else:
-         
-            if projectName:
-    #             messageBox("projectName&designName")
-                if projectName not in projectList:
-                    log.error("project not in aedt.%s"%projectName)
-                    raise Exception("project not in aedt.%s"%projectName)
-                self._oProject = oDesktop.SetActiveProject(projectName)
-     
-            else:
-                #update for 2025.1
-                try:
-                    self._oProject = oDesktop.GetActiveProject()
-                except:
-                    log.info("GetActiveProject error.")
-                
-                if not self._oProject:
-                    self._oProject = oDesktop.GetProjects()[0]
-                    oDesktop.SetActiveProject(self._oProject.GetName())
-                 
-        if not self._oProject:
-            log.error("Must have one project opened in aedt.")
-            raise Exception("Must have one project opened in aedt.")
-         
-        self._info.update("oProject",self._oProject)
-
-        self._info.update("ProjectName", self._oProject.GetName())
-        self._info.update("projectDir", self._oProject.GetPath())
-         
-        self._info.update("ProjectPath", os.path.join(self._info.projectDir,self._info.projectName+".aedt"))
-        self._info.update("ResultsPath", os.path.join(self._info.projectDir,self._info.projectName+".aedtresults"))
-        self._info.update("EdbPath", os.path.join(self._info.projectDir,self._info.projectName+".aedb"))
- 
-        self._info.update("Version", self.oDesktop.GetVersion())
-        self._info.update("InstallDir", self.oDesktop.GetExeDir())
-        self._info.update("InstallPath", self.oDesktop.GetExeDir())
-    
     def initDesign(self,projectName = None,designName = None, initObjects = True):
-        '''Try to intial project properties.
-        
-        AEDT must have on project and design opened.
-        
-        - if projectName give, will be initialize the given project.
-        - if designName give and the projectName must give, will be initialize the given project and design
-        - if projectName and designName not give, it will try to initialize the firt project or design in AEDT
-        
-        Args:
-            projectName (str): projectName to be actived, default is first project in aedt
-            designName (str): designName to be actived, default is first design in project
-        
-        Exceptions:
-            Not have project or design in AEDT
-        
-        '''
-        #layout properties initial
-        #----- 3D Layout object
-#         self._oDesktop = None
-        self._oProject = None
-        self._oDesign = None
-        self._oEditor = None
-#         oDesktop = self.oDesktop
-        
-        self.initProject(projectName)
-
-        #--- getDesignNames
-        designList = self._oProject.GetTopDesignList()
-        if len(designList)<1:
-            log.error("Must have one design opened in project.")
-            self._info.update("oDesign",None)
-            self._info.update("oEditor",None)
-            self._info.update("DesignName", "")
-
-        else:
-        
-            if designName:
-                if designName not in designList:
-                    log.error("design not in project.%s"%designName)
-                    raise Exception("design not in project.%s"%designName)
-                self._oDesign = self._oProject.SetActiveDesign(designName)
+        super(Aedt3DToolBase, self).initDesign(projectName,designName, False)
+        # if self._oDesign:
+        #     self._info.update("oEditor",self._oDesign.SetActiveEditor("3D Modeler"))
+        if initObjects:
+            if self.designtype == 'HFSS 3D Layout Design':
+                pass
             else:
-                #update for 2025.1
-                try:
-                    self._oDesign = self._oProject.GetActiveDesign()
-                except:
-                    log.info("GetActiveDesign error.")
-#                     log.info("try to get the first design")
-#                     self._oDesign = self._oProject.SetActiveDesign(designList[0])
-                
-                #for 2024.2 GetActiveDesign() may return None
-                if not self._oDesign:
-                    log.info("try to get the first design")
-                    self._oDesign = self._oProject.SetActiveDesign(designList[0])
-                    
-            
-            #design type
-            if self._toolType:
-                designtype = self._toolType
-            else:
-                designtype = self._oDesign.GetDesignType()
-            
-            log.info("design type:%s"%designtype)  #exception if not 3DL design
-
-            
-            if designtype != self._toolType:
-                log.error("deisgn: %s type %s not match with input type,  %s."% (self.getDesignName(self._oDesign),designtype, str(self._toolType)))
-            
-            self._info.update("oDesign",self._oDesign)
-            self._info.update("DesignName", self.getDesignName(self._oDesign))
-            
-            if designtype == 'HFSS 3D Layout Design':
-                self._info.update("oDesign",self._oDesign)
-                self._info.update("oEditor",self._oDesign.SetActiveEditor("Layout"))
-                self._info.update("DesignName", self.getDesignName(self._oDesign))
-            else:
-                self._info.update("oDesign",self._oDesign)
-                self._info.update("oEditor",self._oDesign.SetActiveEditor("3D Modeler"))
-                self._info.update("DesignName", self.getDesignName(self._oDesign))
-
-#             if designtype == 'HFSS 3D Layout Design':
-#                 self = Layout(self.version, self.installDir,self.nonGraphical,self.newDesktop,self.usePyAedt,self.oDesktop)
-#                 self.initDesign()
-#             else:
-#                 self.initObjects()
-            #initObjects
-            if initObjects and designtype != 'HFSS 3D Layout Design':
                 self.initObjects()
-            
-        
-
 
     def initObjects(self):
         
@@ -418,20 +121,6 @@ class Aedt3DToolBase(object):
         info.update("Version",self.oDesktop.GetVersion())
         info.update("layout",self)
  
- 
-    
-#     def getDesignName(self,oDesign):
-#         return oDesign.GetName()
-#     
-#     def getDesignNames(self):
-#         return [name for name in self._oProject.GetTopDesignList()]  
-             
-    def getDesignName(self,oDesign):
-        return oDesign.GetName().split(';')[-1]
-    
-    def getDesignNames(self):
-        return [name.split(';')[-1] for name in self._oProject.GetTopDesignList()]       
-             
                 
     #--- design
         

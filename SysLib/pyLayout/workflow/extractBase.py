@@ -563,9 +563,30 @@ class ExtractBase(object):
         #---PortOnNets
         if ports["PortOnNets"]:
         #create port on nets
-            # nets  = ports["PortOnNets"]
-            # compNames = self.layout.Nets.getComponentsOnNets(nets, ignorRLC = not ports["PortOnRLC"])
-            self.layout.Nets.createPortsOnNets(ports["PortOnNets"])
+            nets  = ports["PortOnNets"]
+            if "PortOnRLC" in ports and ports["PortOnRLC"]:
+                ignorRLC = ports["PortOnRLC"]
+            else:
+                ignorRLC = True
+            compNames = self.layout.Nets.getComponentsOnNets(nets, ignorRLC = ignorRLC)
+            if "IgnoreComponent" in ports and ports["IgnoreComponent"]:
+                ignorComps = ports["IgnoreComponent"]
+                if isinstance(ignorComps, str):
+                    ignorComps = re.split(r"[,;\s]+",ignorComps)
+                compNames = [comp for comp in compNames if comp not in ignorComps]
+                
+            if "IgnorePart" in ports and ports["IgnorePart"]:
+                ignorParts = ports["IgnorePart"]
+                if isinstance(ignorParts, str):
+                    ignorParts = re.split(r"[,;\s]+",ignorParts)
+                
+                partsComps = set()
+                for part in ignorParts:
+                    partsComps.update(self.layout.Components.getComponentsByPart(part))
+
+                compNames = [comp for comp in compNames if comp not in partsComps]
+            
+            self.layout.Nets.createPortsOnNets(ports["PortOnNets"], comps = compNames)
             
         #---PortbyPins
         if ports["PortbyPins"]:
@@ -687,6 +708,9 @@ class ExtractBase(object):
             log.info("Setup not enable.")
             return
 
+        #清楚所有setups #20260718
+        self.layout.Setups.deleteAll()
+        
         setup1 = self.layout.Setups.add(Setup["Name"], Setup["SolutionType"])
 #         datas = setup1.getData()
         for k,v in Setup["Options"].Dict.items():
@@ -708,7 +732,7 @@ class ExtractBase(object):
             log.info("Sweep not enable.")
             return
         
-        sweep1 = setup1.addSweep(Sweep["Name"],sweepData=Sweep["Options"]["SweepData"]) #fix 3DL-siwave bug
+        sweep1 = setup1.addSweep(Sweep["Name"],sweepFreqData=Sweep["Options"]["SweepData"]) #fix 3DL-siwave bug
 #         datas = sweep1.getData()
         for k,v in Sweep["Options"].Dict.items():
             try:
@@ -869,6 +893,8 @@ class ExtractBase(object):
             messages = self.layout.getDesignMessage(0) #1 – warning and above
             log.info("Design Message:")
             log.info("".join(messages))
+            log.info("---------End Message only use for Debug-----------------")
+            log.info("--------------------------------------------------------")
 
             #---quit Aedt
             self.layout.close()

@@ -1,5 +1,6 @@
 
-from .desktop import initializeDesktop,releaseDesktop
+from .desktop import initializeDesktop,releaseDesktop,getInstallPath
+from .aedtTool import AedtTool
 from .primitive.component import Components
 from .primitive.pin import Pins
 from .primitive.pin import Pin

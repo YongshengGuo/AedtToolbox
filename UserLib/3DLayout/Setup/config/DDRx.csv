@@ -1,0 +1,20 @@
+ConfigName,DDRx_3200,DDRx_6400,DDRx_10700,DDRx_17600
+Setup/Name,DDRx_3200,DDRx_6400,DDRx_10700,DDRx_17600
+SolutionType,HFSS,HFSS,HFSS,HFSS
+AdaptiveFrequency,1.6Ghz,3.2Ghz,3.2Ghz,8.8Ghz
+Order,Mixed,Mixed,First,First
+DeltaS,0.02,0.02,0.02,0.02
+PercentRefinementPerPass,15,15,15,15
+Setup/Sweep/Name,sweep1,sweep1,sweep1,sweep1
+SweepType,Interpolating,Interpolating,Interpolating,Interpolating
+InterpolatingTolerance,0.005,0.005,0.005,0.005
+SweepData,LIN 0GHz 15GHz 0.01GHz,LIN 0GHz 20GHz 0.01GHz,LIN 0GHz 25GHz 0.01GHz,LIN 0GHz 40GHz 0.01GHz
+UseQ3DForDC,TRUE,TRUE,TRUE,TRUE
+AutoSMatOnlySolve,FALSE,FALSE,FALSE,FALSE
+MinFreqSMatrixOnlySolve,1hz,1hz,1hz,1hz
+Airbox/Options/ExtentType,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent
+Airbox/Options/AirHorExt/Ext,0.5mm,0.5mm,0.5mm,0.5mm
+Airbox/Options/AirPosZExt/Ext,0.5mm,0.5mm,0.5mm,0.5mm
+Airbox/Options/AirNegZExt/Ext,1mm,1mm,1mm,1mm
+Airbox/Options/DielExtentType,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent
+Airbox/Options/DielExt/Ext,0mm,0mm,0mm,0mm

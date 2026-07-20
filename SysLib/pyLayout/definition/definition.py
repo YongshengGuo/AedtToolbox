@@ -78,11 +78,14 @@ class Definition(object):
         keyList = re.split(r"[\\/]", key,maxsplit = 1)
         keyList = list(filter(lambda k:k.strip(),keyList)) #filter empty key
         if len(keyList)>1:
-            self[keyList[0]][keyList[1]] = value
-            self.update()
-            return
+            try:
+                self[keyList[0]][keyList[1]] = value
+                self.update()
+                return
+            except Exception as e:
+                pass
 
-        elif key in self._info.Array:
+        if key in self._info.Array:
             self._info.Array[key] = value
             self.update()
             return
@@ -223,10 +226,10 @@ class Definitions(object):
     def __getitem__(self, key):
         
         if isinstance(key, int):
-            return self.DefinitionDict[key]
+            return self.DefinitionDict[self.NameList[key]]
         
         if isinstance(key, slice):
-            return self.DefinitionDict[key]
+            return self.DefinitionDict[self.NameList[key]]
         
         if isinstance(key, str):
             if key in self.DefinitionDict:
@@ -312,7 +315,11 @@ class Definitions(object):
     
     def pop(self,name):
         del self.DefinitionDict[name]
-        
+    
+    def deleteAll(self):
+        for each in self.All:
+            each.delete()
+        self.refresh()
         
     def getByName(self,name):
         '''

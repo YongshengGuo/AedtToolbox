@@ -199,7 +199,7 @@ def main():
     module = __import__(moduleName, globals(), locals())
     mainFunc = getattr(module, entryFunc)
     mainFunc()
-    activeDesktop.release()
+    activeDesktop.releaseDesktop()
 
 if __name__ == '__main__':
     main()

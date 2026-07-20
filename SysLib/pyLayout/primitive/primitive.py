@@ -367,10 +367,10 @@ class Primitives(object):
         """
         
         if isinstance(key, int):
-            return self.ObjectDict[key]
+            return self.ObjectDict[self.NameList[key]]
         
         if isinstance(key, slice):
-            return self.ObjectDict[key]
+            return self.ObjectDict[self.NameList[key]]
         
         if isinstance(key, str):
             if key in self.ObjectDict:
@@ -379,7 +379,7 @@ class Primitives(object):
             
             elif re.match(r".*[\*\.\?\+\{\}\|].*",key,re.I): #正则表达式
                 #find by 正则表达式
-                lst = [name for name in self.ObjectDict.Keys if re.match(r"^%s$"%key,name,re.I)]
+                lst = [name for name in self.NameList if re.match(r"^%s$"%key,name,re.I)]
                 if not lst:
                     return []
 #                     raise Exception("not found component: %s"%key)

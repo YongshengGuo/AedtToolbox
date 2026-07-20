@@ -80,6 +80,12 @@ class SimConfig(ComplexDict):
     
     def clean(self):
         for key in list(self.Keys):
+            #remove keys 
+            if not isinstance(self[key],(dict,ComplexDict)):
+                log.info("del issue key: %s"%key)
+                del self[key]
+                continue
+            
             if "Enable" in self[key] and not self[key]["Enable"]:
                 log.info("clear dict key: %s"%key)
                 del self[key]

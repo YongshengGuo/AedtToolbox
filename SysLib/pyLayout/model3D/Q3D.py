@@ -10,9 +10,9 @@ from .Aedt3DToolBase import Aedt3DToolBase
 
 class Q3D(Aedt3DToolBase):
 
-    def __init__(self, version=None, installDir=None,nonGraphical=False):
-        super(self.__class__,self).__init__(toolType="Q3D Extractor",version=version, installDir=installDir,nonGraphical=nonGraphical)
-    
+    def __init__(self,toolType=None, version=None, installDir=None,nonGraphical=False,newDesktop=False,usePyAedt=False,oDesktop = None):
+        super(self.__class__,self).__init__(toolType="Q3D Extractor",version=version, installDir=installDir,
+                                            nonGraphical=nonGraphical,newDesktop=newDesktop,usePyAedt=usePyAedt,oDesktop=oDesktop)
     
     def assignNets(self,netInfo):
         '''

@@ -29,6 +29,7 @@ class Airbox(Definition):
         
         if self.parsed and not force:
             return
+
         maps = {}
         datas = hfss3DLParameters.hfssExtents
         _array = ArrayStruct(tuple2list(datas),maps)
@@ -37,6 +38,7 @@ class Airbox(Definition):
         self._info.update("self", self)
         self.parsed = True
         
+        
     def update(self):
         self.layout.oDesign.EditHfssExtents(self.Array.Datas)
-        self.parse(force=True)
+        # self.parse(force=True) #hfssExtents 不能直接获取参数

@@ -90,6 +90,97 @@ from .common import log
 
 _SENTINEL = object()
 
+def _normalize_key_path(key):
+    if not isinstance(key, str):
+        return key
+    return key.replace('\\', '/')
+
+def _split_path_parts(key):
+    if not isinstance(key, str):
+        return []
+    return [part for part in _normalize_key_path(key).split('/') if part]
+
+def _is_path_container(value):
+    return isinstance(value, (dict, list, tuple)) or (
+        hasattr(value, '__getitem__') and not isinstance(value, (str, bytes))
+    )
+
+def _find_matching_dict_key(current_data, key_part, ignorCase=True, default=_SENTINEL):
+    if not isinstance(current_data, dict):
+        return default
+
+    if key_part in current_data:
+        return key_part
+
+    if ignorCase:
+        existing_key = findDictKey(key_part, current_data, ignorCase=True, default=_SENTINEL)
+        if existing_key != _SENTINEL:
+            return existing_key
+
+    normalized_key = _normalize_key_path(key_part)
+    for existing_key in current_data:
+        if not isinstance(existing_key, str):
+            continue
+
+        if ignorCase:
+            if _normalize_key_path(existing_key).lower() == normalized_key.lower():
+                return existing_key
+        elif _normalize_key_path(existing_key) == normalized_key:
+            return existing_key
+
+    return default
+
+def _resolve_existing_path_token(current_data, raw_parts, start_index, ignorCase=True, require_container=False):
+    if start_index >= len(raw_parts):
+        return _SENTINEL, 0
+
+    if isinstance(current_data, dict):
+        for end_index in range(len(raw_parts), start_index, -1):
+            candidate = '/'.join(raw_parts[start_index:end_index])
+            actual_key = _find_matching_dict_key(current_data, candidate, ignorCase=ignorCase, default=_SENTINEL)
+            if actual_key == _SENTINEL:
+                continue
+
+            if require_container:
+                next_value = _resolve_next_level(current_data, actual_key, ignorCase, default=_SENTINEL)
+                if next_value is _SENTINEL or not _is_path_container(next_value):
+                    continue
+
+            return actual_key, end_index - start_index
+
+        return _SENTINEL, 0
+
+    return raw_parts[start_index], 1
+
+def _walk_path_to_parent(raw_parts, dict1, ignorCase=True, enableUpdate=False):
+    current = dict1
+    index = 0
+
+    while len(raw_parts) - index > 1:
+        next_key, consumed = _resolve_existing_path_token(
+            current,
+            raw_parts,
+            index,
+            ignorCase=ignorCase,
+            require_container=True,
+        )
+
+        if next_key == _SENTINEL:
+            if enableUpdate and isinstance(current, dict):
+                next_key = raw_parts[index]
+                current[next_key] = {}
+                current = current[next_key]
+                index += 1
+                continue
+            break
+
+        current = _resolve_next_level(current, next_key, ignorCase, default=_SENTINEL)
+        if current is _SENTINEL:
+            raise Exception("key error: path not found at '%s'" % raw_parts[index])
+        index += consumed
+
+    return current, index
+
 def _resolve_next_level(current_data, key_part, ignorCase=True, default=_SENTINEL):
     """Helper to get next level data without recursion."""
     if isinstance(current_data, (list, tuple)):
@@ -133,12 +224,12 @@ def getDictData(key, dict1, default=None, ignorCase=True):
     if isinstance(key, str):
 
         #key may have "\\", "/"
-        if key in dict1:
-            return dict1[key]
+        if isinstance(dict1, dict):
+            existing_key = _find_matching_dict_key(dict1, key, ignorCase=ignorCase, default=_SENTINEL)
+            if existing_key != _SENTINEL:
+                return dict1[existing_key]
 
-        normalized_key = key.replace('\\', '/')
-        parts = normalized_key.split('/')
-        key_parts = [p for p in parts if p]
+        key_parts = _split_path_parts(key)
         if not key_parts:
             return default
         # Single key optimization
@@ -154,11 +245,18 @@ def getDictData(key, dict1, default=None, ignorCase=True):
         return default
 
     current = dict1
-    for part in key_parts:
+    index = 0
+    while index < len(key_parts):
+        part, consumed = _resolve_existing_path_token(current, key_parts, index, ignorCase=ignorCase)
+        if part == _SENTINEL:
+            part = key_parts[index]
+            consumed = 1
+
         next_val = _resolve_next_level(current, part, ignorCase, default=_SENTINEL)
         if next_val is _SENTINEL:
             return default
         current = next_val
+        index += consumed
         
     return current
 
@@ -172,15 +270,15 @@ def setDictData(key, value, dict1, ignorCase=True, enableUpdate=False):
 
     key_parts = []
     if isinstance(key, str):
-        
         #key may have "\\", "/"
-        if key in dict1:
-            dict1[key] = value
-            return None
+        #考虑兼容 "AirPosZExt/Ext":"1.5mm", key中间有"/"或者"\\"，应当识别成key，不应做分割处理
+        if isinstance(dict1, dict):
+            existing_key = _find_matching_dict_key(dict1, key, ignorCase=ignorCase, default=_SENTINEL)
+            if existing_key != _SENTINEL:
+                dict1[existing_key] = actual_value
+                return None
 
-        normalized_key = key.replace('\\', '/')
-        parts = normalized_key.split('/')
-        key_parts = [p for p in parts if p]
+        key_parts = _split_path_parts(key)
     elif isinstance(key, (list, tuple)):
         key_parts = [k for k in key if k and isinstance(k, str) and k.strip()]
     else:
@@ -189,27 +287,25 @@ def setDictData(key, value, dict1, ignorCase=True, enableUpdate=False):
     if not key_parts:
         raise Exception("Empty key")
 
-    current = dict1
-    parent = None
-    last_key = key_parts[-1]
-    
-    if len(key_parts) == 1:
-        parent = dict1
+    parent, leaf_start = _walk_path_to_parent(key_parts, dict1, ignorCase=ignorCase, enableUpdate=enableUpdate)
+    remaining_parts = key_parts[leaf_start:]
+
+    if not remaining_parts:
+        raise Exception("Empty key")
+
+    if isinstance(parent, dict):
+        leaf_candidate = '/'.join(remaining_parts)
+        existing_key = _find_matching_dict_key(parent, leaf_candidate, ignorCase=ignorCase, default=_SENTINEL)
+        if existing_key != _SENTINEL:
+            last_key = existing_key
+        elif len(remaining_parts) == 1:
+            last_key = remaining_parts[0]
+        else:
+            raise Exception("key error: path not found at '%s'" % remaining_parts[0])
     else:
-        for i in range(len(key_parts) - 1):
-            part = key_parts[i]
-            next_val = _resolve_next_level(current, part, ignorCase, default=_SENTINEL)
-            
-            if next_val is _SENTINEL:
-                if enableUpdate and isinstance(current, dict):
-                    new_dict = {}
-                    current[part] = new_dict
-                    current = new_dict
-                else:
-                    raise Exception("key error: path not found at '%s'" % part)
-            else:
-                current = next_val
-        parent = current
+        if len(remaining_parts) != 1:
+            raise Exception("key error: path not found at '%s'" % remaining_parts[0])
+        last_key = remaining_parts[0]
 
     if isinstance(parent, list):
         try:
@@ -244,13 +340,13 @@ def delDictKey(key, dict1, ignorCase=True):
 
     key_parts = []
     if isinstance(key, str):
-        if key in dict1:
-            del dict1[key]
-            return
+        if isinstance(dict1, dict):
+            existing_key = _find_matching_dict_key(dict1, key, ignorCase=ignorCase, default=_SENTINEL)
+            if existing_key != _SENTINEL:
+                del dict1[existing_key]
+                return
 
-        normalized_key = key.replace('\\', '/')
-        parts = normalized_key.split('/')
-        key_parts = [p for p in parts if p]
+        key_parts = _split_path_parts(key)
     elif isinstance(key, (list, tuple)):
         key_parts = [k for k in key if k and isinstance(k, str) and k.strip()]
     else:
@@ -259,20 +355,25 @@ def delDictKey(key, dict1, ignorCase=True):
     if not key_parts:
         raise Exception("Empty key")
 
-    current = dict1
-    parent = None
-    last_key = key_parts[-1]
+    parent, leaf_start = _walk_path_to_parent(key_parts, dict1, ignorCase=ignorCase, enableUpdate=False)
+    remaining_parts = key_parts[leaf_start:]
 
-    if len(key_parts) == 1:
-        parent = dict1
+    if not remaining_parts:
+        raise Exception("Empty key")
+
+    if isinstance(parent, dict):
+        leaf_candidate = '/'.join(remaining_parts)
+        existing_key = _find_matching_dict_key(parent, leaf_candidate, ignorCase=ignorCase, default=_SENTINEL)
+        if existing_key != _SENTINEL:
+            last_key = existing_key
+        elif len(remaining_parts) == 1:
+            last_key = remaining_parts[0]
+        else:
+            raise Exception("key error: path not found at '%s'" % remaining_parts[0])
     else:
-        for i in range(len(key_parts) - 1):
-            part = key_parts[i]
-            next_val = _resolve_next_level(current, part, ignorCase, default=_SENTINEL)
-            if next_val is _SENTINEL:
-                raise Exception("key error: path not found at '%s'" % part)
-            current = next_val
-        parent = current
+        if len(remaining_parts) != 1:
+            raise Exception("key error: path not found at '%s'" % remaining_parts[0])
+        last_key = remaining_parts[0]
 
     if isinstance(parent, list):
         try:
@@ -696,9 +797,29 @@ class ComplexDict(object):
     def copy(self):
         return self.__class__(deepcopy(self._dict))
 
-    def writeJosn(self, path):
+    def writeJson(self, path):
         writeJson(path, self._dict)
 
+    
+    def normalizeKeys(self):
+        #标准化key，如果可以里面有/或者\\, 则将其分割为多级key
+        #比如 key = {"Header/Comment":value}  will be normalized to {"Header":{"Comment":value}}
+        # Iterate over a snapshot to avoid "dictionary keys changed during iteration".
+        for k, v in list(self._dict.items()):
+            if isinstance(v, (dict, ComplexDict)):
+                v = ComplexDict(v)
+                v.normalizeKeys()
+                self._dict[k] = v.Dict
+            if isinstance(k, str) and ("/" in k or "\\" in k):
+                parts = re.split(r'[\\/]', k)
+                current = self._dict
+                for part in parts[:-1]:
+                    if part not in current or not isinstance(current[part], dict):
+                        current[part] = {}
+                    current = current[part]
+                current[parts[-1]] = v
+                del self._dict[k]
+        
     def loadConfig(self, config):
         if isinstance(config, str):
             if os.path.exists(config):
@@ -711,3 +832,13 @@ class ComplexDict(object):
             self._dict = config.Dict
         else:
             raise Exception("loadConfig: config must be path, dict or ComplexDict. %s" % str(config))
+        
+        # self.normalizeKeys()
+    
+    @classmethod
+    def readJson(cls, path):
+        if os.path.exists(path):
+            config = loadJson(path)
+            return cls(config)
+        else:
+            raise Exception("Not found config file %s" % path)

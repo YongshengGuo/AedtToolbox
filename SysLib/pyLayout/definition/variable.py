@@ -48,8 +48,12 @@ class Variable(Definition):
         '''
         super(self.__class__,self).__init__(name,type="Variable",layout=layout)
 
-            
-            
+    def __setattr__(self, key, value):
+        if key in ["layout","name","_info","parsed","type","maps"]:
+            object.__setattr__(self,key,value)
+        else:
+            self.set(value)
+
     def __str__(self):
         return str(self.Value)
 
@@ -121,7 +125,7 @@ class Variable(Definition):
                         "NAME:ChangedProps",
                         [
                             "NAME:%s"%var,
-                            "Value:=", "%s"%val
+                            "Value:=", "%s"%str(val)
                         ]
                     ]
                 ]
@@ -160,7 +164,7 @@ class Variables(Definitions):
     def __init__(self,layout=None):
         '''Initialize Variables object
         '''
-        super(self.__class__,self).__init__(layout, type="Variable",definitionCalss=Variable)
+        super(Variables,self).__init__(layout, type="Variable",definitionCalss=Variable)
 
 
     def __setitem__(self, key, value):
@@ -243,11 +247,46 @@ class Variables(Definitions):
         var = self.add("EvalExpressionValue", expression)
         return var.SIValue
     
+    def removeUnusedVariables(self):
+        '''
+        Remove the unused variables in project
+        '''
+        ProjectVars,designVars = self.layout.oProject.GetVariables(),self.layout.oDesign.GetVariables()
+        self.layout.oProject.ChangeProperty(
+            [
+                "NAME:AllTabs",
+                [
+                    "NAME:ProjectVariableTab",
+                    [
+                        "NAME:PropServers", 
+                        "ProjectVariables"
+                    ],
+                    [
+                        "NAME:DeletedProps", 
+                    ] + list(ProjectVars)
+                ]
+            ])
+    
+        self.layout.oDesign.ChangeProperty(
+            [
+                "NAME:AllTabs",
+                [
+                    "NAME:LocalVariableTab",
+                    [
+                        "NAME:PropServers", 
+                        "LocalVariables"
+                    ],
+                    [
+                        "NAME:DeletedProps", 
+                    ] + list(designVars)
+                ]
+            ])
     
     def setByDict(self,varDict):
         for k,v in varDict.items():
             if k in self:
                 self[k] = v
+                log.info("Variable %s set to %s"%(k,v))
             else:
                 log.info("Variable not found: %s"%k)
         

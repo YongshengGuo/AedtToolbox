@@ -154,9 +154,9 @@
   "Airbox":{
     "Enable":true,
     "Options":{
-      "ExtentType":"BboxExtent",
-      "DielExtentType":"BboxExtent",
-      "DielExt/Ext":"0.005",
+      "ExtentType":"OrientedBboxExtent",
+      "DielExtentType":"OrientedBboxExtent",
+      "DielExt/Ext":"0",
       "DielExt/Dim":false,
       "AirHorExt/Ext":"1.5mm",
       "AirHorExt/Dim":true,

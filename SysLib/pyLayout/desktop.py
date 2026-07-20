@@ -43,6 +43,62 @@ isIronpython = "IronPython" in sys.version
 isPython = not isIronpython
 is_linux = "posix" in os.name
 
+def getInstallPath(version=None):
+    """
+    version支持格式:
+    - 2026.1, 2026.R1
+    - 2026.1.0
+    - 26R1, 2026R1 
+    统一归一化为环境变量ANSYSEM_ROOTxxx，例如2026.R1或26R1 归一化为ANSYSEM_ROOT261
+    查找ANSYSEM_ROOT261是否存在于环境变量中，如果存在则返回环境变量的值，这个值是aedt按照的目录
+    如果version值不指定，则对ANSYSEM_ROOTxxx环境变量排序，返回最新的一个（数字最大）
+    """
+    def _normalize_ver_suffix(ver):
+        if not ver:
+            return None
+
+        txt = str(ver).strip().upper()
+        txt = txt.replace("ANSOFT.ELECTRONICSDESKTOP.", "")
+
+        # 2026.R1 / 2026R1 / 2026.1 / 2026.1.0
+        m = re.match(r"^(\d{4})(?:\.|)?(?:R)?(\d)(?:\.\d+)?$", txt)
+        if m:
+            return "%s%s" % (m.group(1)[-2:], m.group(2))
+
+        # 26R1
+        m = re.match(r"^(\d{2})R(\d)$", txt)
+        if m:
+            return "%s%s" % (m.group(1), m.group(2))
+
+        # Backward-compatible fallback
+        compact = re.sub(r"[^0-9A-Z]", "", txt)
+        if len(compact) >= 3:
+            return compact[-3:]
+        return None
+
+    # 1) If version specified, try exact ANSYSEM_ROOTxxx
+    if version:
+        ver_suffix = _normalize_ver_suffix(version)
+        if ver_suffix:
+            ver_env = "ANSYSEM_ROOT%s" % ver_suffix
+            if ver_env in os.environ:
+                return os.environ[ver_env].strip()
+            else:
+                log.exception("Environment variable %s not found for version %s" % (ver_env, version))
+
+    # 2) Fallback to generic ANSYSEM_ROOT
+    if "ANSYSEM_ROOT" in os.environ and os.environ["ANSYSEM_ROOT"].strip():
+        return os.environ["ANSYSEM_ROOT"]
+
+    # 3) If no version (or exact version not found), pick latest ANSYSEM_ROOTxxx
+    roots = [k for k in os.environ if re.match(r"^ANSYSEM_ROOT\d{3}$", k)]
+    if roots:
+        roots.sort(key=lambda x: int(x[-3:]))
+        return os.environ[roots[-1]]
+
+    return None
+
+
 def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDesktop=False):
     '''
     initializeDesktop'''
@@ -66,26 +122,27 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
 #         print("AEDT InstallDir: %s"%aedtInstallDir)
     else:
         #environ ANSYSEM_ROOTxxx, set installDir from version
+        aedtInstallDir = getInstallPath(version)
         
-        verEnv = None
-        if version:
-            ver = version.replace(".", "")[-3:]
-            verEnv = "ANSYSEM_ROOT%s" % ver
+        # verEnv = None
+        # if version:
+        #     ver = version.replace(".", "")[-3:]
+        #     verEnv = "ANSYSEM_ROOT%s" % ver
             
-            if verEnv in os.environ:
-                aedtInstallDir = os.environ[verEnv] 
+        #     if verEnv in os.environ:
+        #         aedtInstallDir = os.environ[verEnv] 
         
-        if aedtInstallDir:
-            os.environ["ANSYSEM_ROOT"] = aedtInstallDir
-        elif "ANSYSEM_ROOT" in os.environ and os.environ["ANSYSEM_ROOT"].strip():
-            aedtInstallDir = os.environ["ANSYSEM_ROOT"]
-        else:
-            ANSYSEM_ROOTs = list(
-                filter(lambda x: "ANSYSEM_ROOT" in x, os.environ))
-            if ANSYSEM_ROOTs:
-                log.debug("Try to initialize Desktop in latest version")
-                ANSYSEM_ROOTs.sort(key=lambda x: x[-3:])
-                aedtInstallDir = os.environ[ANSYSEM_ROOTs[-1]]
+        # if aedtInstallDir:
+        #     os.environ["ANSYSEM_ROOT"] = aedtInstallDir
+        # elif "ANSYSEM_ROOT" in os.environ and os.environ["ANSYSEM_ROOT"].strip():
+        #     aedtInstallDir = os.environ["ANSYSEM_ROOT"]
+        # else:
+        #     ANSYSEM_ROOTs = list(
+        #         filter(lambda x: "ANSYSEM_ROOT" in x, os.environ))
+        #     if ANSYSEM_ROOTs:
+        #         log.debug("Try to initialize Desktop in latest version")
+        #         ANSYSEM_ROOTs.sort(key=lambda x: x[-3:])
+        #         aedtInstallDir = os.environ[ANSYSEM_ROOTs[-1]]
          
     if aedtInstallDir: 
         print("AEDT InstallDir: %s"%aedtInstallDir)
@@ -159,6 +216,7 @@ def initializeDesktop(version=None, installDir=None, nonGraphical = False,newDes
                 oDesktop = oAnsoftApp.GetAppDesktop()
             except Exception:
                     log.info("Intial AEDT from python win32com fail, AEDT Version: %s"%version)
+                    log.info("Please install pywin32 module: pip install pywin32")
                     oDesktop = None
  
     if oDesktop is not None:

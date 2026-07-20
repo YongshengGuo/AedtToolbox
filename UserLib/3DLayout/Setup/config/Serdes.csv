@@ -1,0 +1,20 @@
+ConfigName,SERDES_8G,SERDES_16G,SERDES_25G,SERDES_32G,SERDES_56G,SERDES_56G_PAM4,SERDES_64G,SERDES_64G_PAM4,SERDES_112G,SERDES_112G_PAM4,SERDES_224G,SERDES_224G_PAM4,SERDES_448G,SERDES_448G_PAM4
+Setup/Name,SERDES_8G,SERDES_16G,SERDES_25G,SERDES_32G,SERDES_56G,SERDES_56G_PAM4,SERDES_64G,SERDES_64G_PAM4,SERDES_112G,SERDES_112G_PAM4,SERDES_224G,SERDES_224G_PAM4,SERDES_448G,SERDES_448G_PAM4
+SolutionType,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS,HFSS
+AdaptiveFrequency,"1Ghz,4Ghz","1Ghz,4Hhz,8Ghz","1Ghz,6Ghz,12.5Ghz","1Ghz,8Ghz,16Ghz","1Ghz,14Ghz,28Ghz","1Ghz,7Ghz,14Ghz","1Ghz,16Ghz,32Ghz","1Ghz,8Ghz,16Ghz","1Ghz,32Ghz,64Ghz","1Ghz,16Ghz,32Ghz","1Ghz,64Ghz,112Ghz","1Ghz,28Ghz,56Ghz","1Ghz,112Ghz,224Ghz","1Ghz,64Ghz,112Ghz"
+Order,First,First,First,First,First,First,First,First,First,First,First,First,First,First
+DeltaS,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02,0.02
+PercentRefinementPerPass,15,15,15,15,15,15,15,15,15,15,15,15,15,15
+Setup/Sweep/Name,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1,sweep1
+SweepType,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating,Interpolating
+InterpolatingTolerance,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0.005,0.005
+SweepData,LIN 0GHz 20GHz 0.01GHz,LIN 0GHz 30GHz 0.01GHz,LIN 0GHz 40GHz 0.01GHz,LIN 0GHz 50GHz 0.01GHz,LIN 0GHz 90GHz 0.01GHz,LIN 0GHz 50GHz 0.01GHz,LIN 0GHz 90GHz 0.01GHz,LIN 0GHz 50GHz 0.01GHz,LIN 0GHz 120GHz 0.01GHz,LIN 0GHz 70GHz 0.01GHz,LIN 0GHz 220GHz 0.01GHz,LIN 0GHz 110GHz 0.01GHz,LIN 0GHz 400GHz 0.01GHz,LIN 0GHz 220GHz 0.01GHz
+UseQ3DForDC,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
+AutoSMatOnlySolve,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE,FALSE
+MinFreqSMatrixOnlySolve,1hz,1hz,1hz,1hz,1hz,1hz,1hz,1hz,1hz,1hz,1hz,1hz,1hz,1hz
+Airbox/Options/ExtentType,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent
+Airbox/Options/AirHorExt/Ext,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm,0.5mm
+Airbox/Options/AirPosZExt/Ext,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm
+Airbox/Options/AirNegZExt/Ext,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm,1mm
+Airbox/Options/DielExtentType,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent,OrientedBboxExtent
+Airbox/Options/DielExt/Ext,0mm,0mm,0mm,0mm,0mm,0mm,0mm,0mm,0mm,0mm,0mm,0mm,0mm,0mm

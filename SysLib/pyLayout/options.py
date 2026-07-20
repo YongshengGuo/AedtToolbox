@@ -33,7 +33,7 @@ class Option(ComplexDict):
             log.exception("Not found config file %s"%path)
 
     def writeConfig(self,path):
-        self.writeJosn(path)
+        self.writeJson(path)
 
 #     def getFileConfig(self,path):
 #         if os.path.exists(path):
@@ -124,7 +124,7 @@ options = Option({
     #---license
     "AEDT_WaitForLicense": False,
     "AEDT_LicenseServer": "", #1055@shnyguo, ANSYSLMD_LICENSE_FILE and ANSYSLI_SERVERS
-    "AEDT_KeepGUILicense": True, # True: keep false: not keep
+    "AEDT_KeepGUILicense": False, # True: keep false: not keep
     #---solver
     "AEDT_HPC_MachineName":'localhost',
     "AEDT_HPC_NumCores":None,

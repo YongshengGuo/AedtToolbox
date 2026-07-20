@@ -14,6 +14,7 @@ Examples:
 '''
 import os
 import re
+import time
 from ..common.complexDict import ComplexDict
 from ..common.common import log,findFilesByPattern
 
@@ -61,7 +62,17 @@ class DCSolution(object):
                 "SimName:="		, self.name
             ])
         
+        #检测path文件的大小，间隔时间5秒钟，如果小于1kB则一直等待，超时时间10分钟
+        timeout = 600
+        interval = 5
+        elapsed = 0
+        while os.path.exists(path) and os.path.getsize(path) < 1024 and elapsed < timeout:
+            log.info("waiting for html report generation: %ss"%str(elapsed))
+            time.sleep(interval)
+            elapsed += interval
 
+        return path
+#HFSS 3D Layout Design的Solution类
 class SYZSolution(object):
     
     def __init__(self,name = None,variation = None,layout=None):
@@ -75,7 +86,7 @@ class SYZSolution(object):
     
     
     def exportSNP(self,path = None):
-        self.exportNetworkData(path)
+        return self.exportNetworkData(path)
         
     def exportNetworkData(self,path = None):
         solutionName = self.name
@@ -94,6 +105,14 @@ class SYZSolution(object):
             log.info("export snp: %s"%path)
             oModule = self.layout.oDesign.GetModule("SolveSetups")
             variation_array=oModule.ListVariations(solutionName)
+            
+            # #delete diff Pairs，避免导出mixed-sparameters
+            oModuleExt = self.layout.oDesign.GetModule("Excitations")
+            oModuleExt.SetDiffPairs(
+                [
+                    "NAME:DiffPairs"
+                ])
+            
             if not variation_array:
                 variation_array = [""]
             self.layout.oDesign.ExportNetworkData(variation_array[0], [solutionName], 3, path, ["ALL"], True, 50, "S", -1, 0, 15)
@@ -101,8 +120,109 @@ class SYZSolution(object):
             log.error("Export snp fail, Solution data may be not available.")
 #         variation_array=self.oModule.ListVariations(solutionName)
 #         self.oDesign.ExportNetworkData(variation_array[0], [solutionName], 3, path, ["ALL"], True, 50, "S", -1, 0, 15)
-    
 
+        return path
+        
+    def exportProfile(self, path=None):
+        setupName, sweepName = self.name.split(":")
+        if not path:
+            path = os.path.join(self.layout.projectDir,"_".join([self.layout.projectName,self.layout.designName,setupName, sweepName])+".prof")
+            
+        oModule = self.layout.oDesign.GetModule("SolveSetups")
+        variation_array=oModule.ListVariations(self.name)
+        if not variation_array:
+            variation_array = [""]
+        log.info("export profile: %s"%path)
+        self.layout.oDesign.ExportProfile(setupName, variation_array[0], path)
+        return path
+        
+    def exportConvergence(self, path=None):
+        setupName, sweepName = self.name.split(":")
+        if not path:
+            path = os.path.join(self.layout.projectDir,"_".join([self.layout.projectName,self.layout.designName,setupName, sweepName])+".conv")
+            
+        oModule = self.layout.oDesign.GetModule("SolveSetups")
+        variation_array=oModule.ListVariations(self.name)
+        if not variation_array:
+            variation_array = [""]
+        log.info("export convergence: %s"%path)
+        self.layout.oDesign.ExportConvergence(setupName, variation_array[0], path)  
+
+#hfss Solution类
+class HfssSolution(object):
+    
+    def __init__(self,name = None,variation = None,layout=None):
+        
+        self.name = name
+        self.layout = layout
+
+    @property
+    def Name(self):
+        return self.name
+    
+    
+    def exportSNP(self,path = None):
+        return self.exportNetworkData(path)
+        
+    def exportNetworkData(self,path = None):
+        solutionName = self.name
+        oModuleBoundary = self.layout.oDesign.GetModule("BoundarySetup")
+        ext = ".s%sp"%str(int(oModuleBoundary.GetNumExcitations()/2))
+        
+        if not path:
+#             path = self.layout.projectDir + "\%s"%solutionName
+            path = os.path.join(self.layout.projectDir,"_".join([self.layout.projectName,self.layout.designName])+ext)
+        
+        elif ext not in path:
+            path += ext
+        else:
+            pass
+
+        try:
+            log.info("export snp: %s"%path)
+            oModule = self.layout.oDesign.GetModule("Solutions")
+            variation_array=oModule.ListVariations(solutionName)
+            # #delete diff Pairs，避免导出mixed-sparameters
+            oModule1 = self.layout.oDesign.GetModule("BoundarySetup")
+            oModule1.EditDiffPairs(
+                [
+                    "NAME:EditDiffPairs"
+                ])
+
+            if not variation_array:
+                variation_array = [""]
+            oModule.ExportNetworkData(variation_array[0], [solutionName], 3, path, ["All"], True, 50, "S", -1, 0, 15)
+        except:
+            log.error("Export snp fail, Solution data may be not available.")
+        return path
+
+    def exportProfile(self, path=None):
+        setupName, sweepName = self.name.split(":")
+        if not path:
+            path = os.path.join(self.layout.projectDir,"_".join([self.layout.projectName,self.layout.designName,setupName, sweepName])+".prof")
+            
+        oModule = self.layout.oDesign.GetModule("Solutions")
+        variation_array=oModule.ListVariations(self.name)
+        if not variation_array:
+            variation_array = [""]
+        log.info("export profile: %s"%path)
+        
+        self.layout.oDesign.ExportProfile(setupName, variation_array[0], path)
+        return path
+        
+    def exportConvergence(self, path=None):
+        setupName, sweepName = self.name.split(":")
+        if not path:
+            path = os.path.join(self.layout.projectDir,"_".join([self.layout.projectName,self.layout.designName,setupName, sweepName])+".conv")
+            
+        oModule = self.layout.oDesign.GetModule("Solutions")
+        variation_array=oModule.ListVariations(self.name)
+        if not variation_array:
+            variation_array = [""]
+        log.info("export convergence: %s"%path)
+        self.layout.oDesign.ExportConvergence(setupName, variation_array[0], path)  
+        return path
+        
 class Solutions(object):
     
     def __init__(self,layout=None):
@@ -152,36 +272,46 @@ class Solutions(object):
     def __len__(self):
         return len(self.SolutionDict)
     
+    def _hfss3DLayoutSolutionDict(self):
+        solutionDict = {}
+        maps = {}
+        setups = self.layout.Setups
+        for setup in setups:
+            name = setup.name
+            setupType = setup["SolveSetupType"]
+            if setupType == "SIwaveDCIR":
+                solutionDict.update({name:DCSolution(name,layout=self.layout)})
+            elif setupType == "HFSS" or setupType == "SIwave":
+                for sweep in setup.Sweeps:
+                    name = "%s:%s"%(setup.name,sweep.name)
+                    solutionDict.update({name:SYZSolution(name,layout=self.layout)})
+                    maps.update({"%s_%s"%(setup.name,sweep.name):"%s:%s"%(setup.name,sweep.name)})
+            else:
+                log.warning("setup type: %s is not supported."%setupType)
+            self.solutionDict  = ComplexDict(solutionDict,maps=maps)
+    
+    def _hfssSolutionDict(self):
+        solutionDict = {}
+        maps = {}
+        setups = self.layout.Setups
+        for setup in setups:
+            for sweep in setup.Sweeps:
+                name = "%s:%s"%(setup.name,sweep.name)
+                solutionDict.update({name:HfssSolution(name,layout=self.layout)})
+                maps.update({"%s_%s"%(setup.name,sweep.name):"%s:%s"%(setup.name,sweep.name)})
+            self.solutionDict  = ComplexDict(solutionDict,maps=maps)
+    
     @property
     def SolutionDict(self):
         if self.solutionDict is None:
-            solutionDict = {}
-            maps = {}
-            setups = self.layout.Setups
-            for setup in setups:
-                name = setup.name
-                setupType = setup["SolveSetupType"]
-                if setupType == "SIwaveDCIR":
-                    solutionDict.update({name:DCSolution(name,layout=self.layout)})
-                elif setupType == "HFSS" or setupType == "SIwave":
-                    for sweep in setup.Sweeps:
-                        name = "%s:%s"%(setup.name,sweep.name)
-                        solutionDict.update({name:SYZSolution(name,layout=self.layout)})
-                        maps.update({"%s_%s"%(setup.name,sweep.name):"%s:%s"%(setup.name,sweep.name)})
-                else:
-                    log.warning("setup type: %s is not supported."%setupType)
+        # 根据条件选择目标模块
+            if self.layout.DesignType == 'HFSS':
+                self._hfssSolutionDict()
+            elif self.layout.DesignType == 'HFSS 3D Layout Design':
+                self._hfss3DLayoutSolutionDict()
+            else:
+                raise ValueError("Unsupported DesignType: %s" % getattr(self.layout, "DesignType", None))
 
-            # oModule = self.layout.oDesign.GetModule("SolveSetups")
-            # setups = oModule.GetSetups()
-            # for setup in setups:
-                
-
-            #     for sweep in oModule.GetSweeps(setup):
-            #         name = "%s:%s"%(setup,sweep)
-            #         solutionDict.update({name:Solution(name,layout=self.layout)})
-            #         maps.update({"%s_%s"%(setup,sweep):"%s:%s"%(setup,sweep)})
-
-            self.solutionDict  = ComplexDict(solutionDict,maps=maps)
         return self.solutionDict 
     
     @property

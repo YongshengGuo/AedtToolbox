@@ -139,6 +139,7 @@ class Layout(object):
         self._info.update("edbApp",None)
         self._info.update("ProcessID",None)
         self._info.update("GrpcPort",None)
+        self._info.update("ToolType",'HFSS 3D Layout Design')
 #         self._info.maps.update({"edbApp":{"Key":"self","Get":lambda s:s.getEdbApp()}})
 #         self._info.update("Maps", self.maps)
         
@@ -156,9 +157,6 @@ class Layout(object):
         self._oProject = None
         self._oDesign = None
         self._oEditor = None
-        
-
-        
         
     def __del__(self):
 #         self._oDesktop = None
@@ -537,7 +535,7 @@ class Layout(object):
             log.info("Simulation log recorded in: %s"%path)
 
     
-    def initDesign(self,projectName = None,designName = None, initLayout = True):
+    def initDesign(self,projectName = None,designName = None, initObjects = True):
         '''Try to intial project properties.
         
         AEDT must have on project and design opened.
@@ -597,26 +595,27 @@ class Layout(object):
                         self.quitAedt()
                         log.error("Get first design error, please check license setup.")
                     
-                    
                 #make sure the design is 3DL
                 designtype = self._oDesign.GetDesignType()
                 if designtype != 'HFSS 3D Layout Design':
-                    log.error("design type error, not 3D layout design.")  #exception if not 3DL design
-                    self._info.update("oDesign",None)
-                    self._info.update("oEditor",None)
-                    self._info.update("DesignName", "")
-                    self._info.update("designtype", designtype)
+                    # log.error("design type error, not 3D layout design.")  #exception if not 3DL design
+                    self._info.update("oDesign",self._oDesign)
+                    self._info.update("oEditor",self._oDesign.SetActiveEditor("3D Modeler"))
+                    self._info.update("DesignName", self.getDesignName(self._oDesign))
+                    self._info.update("DesignType", designtype)
+                    self._info.update("ToolType", designtype)
                 else:
                     self._info.update("oDesign",self._oDesign)
                     self._info.update("oEditor",self._oDesign.SetActiveEditor("Layout"))
                     self._info.update("DesignName", self.getDesignName(self._oDesign))
-                    self._info.update("designtype", designtype)
+                    self._info.update("DesignType", designtype)
+                    self._info.update("ToolType", designtype)
                     
             log.info("init design: %s : %s"%(self.projectName,self.designName))      
-            #intial layout elements
-            self.enableICMode(False)
             
-            if initLayout and self._info.oEditor:
+            if initObjects and self._info.oEditor:
+                #intial layout elements
+                # self.enableICMode(False)
                 self.initObjects()
 
     def initObjects(self):
@@ -874,34 +873,38 @@ class Layout(object):
     
     def getUnit2(self):
         
-        unit1 = None
-        unit2 = None
-        #get via most unit 
-        objs = self.oEditor.FindObjects('Type', "via")
-        if len(objs)>5:
-            lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"HoleDiameter")) for obj in objs[:5]]
-            count = Counter(lst)
-            most_common = count.most_common(1)
-            unit1 = most_common[0][0]
-#             return unit
-        
-        #get line most unit  LineWidth
-        objs = self.oEditor.FindObjects('Type', "line")
-        if len(objs)>5:
-            lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"LineWidth")) for obj in objs[:5]]
-            count = Counter(lst)
-            most_common = count.most_common(1)
-            unit2 = most_common[0][0]
-#             return unit
+        try:
+            unit1 = None
+            unit2 = None
+            #get via most unit 
+            objs = self.oEditor.FindObjects('Type', "via")
+            if len(objs)>5:
+                lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"HoleDiameter")) for obj in objs[:5]]
+                count = Counter(lst)
+                most_common = count.most_common(1)
+                unit1 = most_common[0][0]
+    #             return unit
             
-        if unit1 and unit1 == unit2:
-            return unit1
-        
-        elif unit2:
-            return unit2
-        else:
-            #have bug in 2024R2
+            #get line most unit  LineWidth
+            objs = self.oEditor.FindObjects('Type', "line")
+            if len(objs)>5:
+                lst = [re.sub(r"[\d\.]*","",self.oEditor.GetPropertyValue("BaseElementTab",obj,"LineWidth")) for obj in objs[:5]]
+                count = Counter(lst)
+                most_common = count.most_common(1)
+                unit2 = most_common[0][0]
+    #             return unit
+                
+            if unit1 and unit1 == unit2:
+                return unit1
+            
+            elif unit2:
+                return unit2
+            else:
+                #have bug in 2024R2
+                return self.oEditor.GetActiveUnits()
+        except:
             return self.oEditor.GetActiveUnits()
+            
     
     def getUnit(self):
         #have bug in 2024R2
@@ -1777,7 +1780,7 @@ class Layout(object):
     @classmethod
     def copyAEDT(cls,source,target):
         '''
-        copy aedb,aedt
+        copy aedb,aedt to target.aedt
         '''
         from shutil import copy
         #source = (source,source+".aedt")(".aedt" in source)
@@ -1794,6 +1797,11 @@ class Layout(object):
         if not os.path.exists(aedtTargetDir):
             print("make dir: %s"%aedtTargetDir)
             os.mkdir(aedtTargetDir)
+        
+        #判断source,aedtTarget是否相同
+        if os.path.abspath(source) == os.path.abspath(aedtTarget):
+            print("source and target are the same, skip copy.")
+            return aedtTarget
         
         copy(source,aedtTarget)
         

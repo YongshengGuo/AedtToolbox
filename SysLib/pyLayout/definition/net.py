@@ -391,8 +391,8 @@ class Nets(Definitions):
     
     def getComponentsOnNets(self,nets,ignorRLC = True):
         
-        if isinstance(nets, str):
-            nets = [nets]
+        # if isinstance(nets, str):
+        #     nets = [nets]
         nets = self.getRegularNets(nets)
         if not nets: return []
         compList = self.layout.Components.NameList

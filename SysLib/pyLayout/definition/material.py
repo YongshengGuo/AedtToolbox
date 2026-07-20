@@ -246,12 +246,24 @@ class Materials(Definitions):
             material.update()
             self.push(material.name)
             return material
-        
+    
+    def removeUnusedMaterials(self):
+        '''
+        Remove the unused materials in project
+        '''
+        self.layout.oProject.RemoveUnusedDefinitions(
+            [
+                [
+                    "NAME:Materials", 
+                ] + self.NameList
+            ])
+
+    
     def addHFSSDSModle(self,name,dk=4,df=0.02,f1=1e9,cond_dc=1e-12,fB=10**12/(2*math.pi)):
         '''
         Djordjevic-Sarkar Model Parameter Calculation in hfss
         WA<<W1=> f1>>fB
-        fB default 10^12/(2*pi)
+        fB default 10^12/(2*pi) = 159.155
         '''
         # K = f"({dk} * {df} - {cond_dc} / (2 * pi * {freqA} * e0)) / atan({freqB} / {freqA})"
         dk = Unit(dk).V

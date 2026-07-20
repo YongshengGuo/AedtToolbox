@@ -170,16 +170,16 @@ def _releaseComObjects():
                             from System.Runtime.InteropServices import Marshal
                             while Marshal.ReleaseComObject(oDesktop) > 0:
                                 pass
-                            log.info("Released _oDesktop COM object (IronPython)")
+                            print("Released _oDesktop COM object (IronPython)")
                             released_count += 1
                         except Exception as e:
-                            log.debug("Marshal.ReleaseComObject not available: %s" % str(e))
+                            print("Marshal.ReleaseComObject not available: %s" % str(e))
                     else:
                         # For CPython: just delete the reference
-                        log.info("Released _oDesktop reference")
+                        print("Released _oDesktop reference")
                         released_count += 1
                 except Exception as e:
-                    log.warning("Error releasing _oDesktop: %s" % str(e))
+                    print("Error releasing _oDesktop: %s" % str(e))
         
         if hasattr(module, "oDesktop"):
             oDesktop = getattr(module, "oDesktop")
@@ -190,21 +190,21 @@ def _releaseComObjects():
                             from System.Runtime.InteropServices import Marshal
                             while Marshal.ReleaseComObject(oDesktop) > 0:
                                 pass
-                            log.info("Released oDesktop COM object (IronPython)")
+                            print("Released oDesktop COM object (IronPython)")
                             released_count += 1
                         except Exception as e:
-                            log.debug("Marshal.ReleaseComObject not available: %s" % str(e))
+                            print("Marshal.ReleaseComObject not available: %s" % str(e))
                     else:
-                        log.info("Released oDesktop reference")
+                        print("Released oDesktop reference")
                         released_count += 1
                 except Exception as e:
-                    log.warning("Error releasing oDesktop: %s" % str(e))
+                    print("Error releasing oDesktop: %s" % str(e))
     
     except Exception as e:
-        log.debug("_releaseComObjects error: %s" % str(e))
+        print("_releaseComObjects error: %s" % str(e))
     
     if released_count > 0:
-        log.info("COM objects released: %d" % released_count)
+        print("COM objects released: %d" % released_count)
     
     return released_count
 
@@ -292,13 +292,13 @@ def releaseDesktop():
     module = sys.modules['__main__']
     try:
         # Release all COM objects and delete references
-        log.info("Releasing COM resources...")
+        print("Releasing COM resources...")
         _delete_objects()
-        log.info("COM resources released. AEDT window control relinquished.")
+        print("COM resources released. AEDT window control relinquished.")
         return True
         
     except Exception as e:
-        log.warning("Exception in releaseDesktop: %s" % str(e))
+        print("Exception in releaseDesktop: %s" % str(e))
         try:
             _delete_objects()
         except Exception:
