@@ -1,4 +1,5 @@
-Docs: https://yongshengguo.github.io/AedtToolbox/
+中文 Docs: https://yongshengguo.github.io/AedtToolbox/
+English Docs: https://yongshengguo.github.io/AedtToolbox/en/index.html
 
 # Welcome to Aedt Toolbox
 
